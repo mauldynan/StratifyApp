@@ -3,7 +3,7 @@
 [versions]
 # Versi untuk plugin
 # Note: agp version was 8.10.1, but androidApplication plugin was 8.4.1. Aligning to what the plugin uses.
-agp = "8.4.1"
+agp = "8.12.3"
 kotlin = "1.9.23"
 googleGmsGoogleServices = "4.4.1"
 navigation = "2.7.7" # Kept the newer version

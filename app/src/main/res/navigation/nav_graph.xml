@@ -52,17 +52,15 @@
 
     <dialog
         android:id="@+id/profileOptionsFragment"
-        android:name="com.example.stratify.ProfileOptionsFragment"
+        android:name="com.example.scrum_section.ProfileOptionsFragment"
         android:label="ProfileOptionsFragment"
         tools:layout="@layout/fragment_profile_options" />
 
-    <!--
     <fragment
         android:id="@+id/navigation_scrum"
         android:name="com.example.scrum_section.ScrumFragment"
         android:label="@string/title_scrum"
         tools:layout="@layout/fragment_scrum" />
-    -->
 
     <fragment
         android:id="@+id/navigation_workspace"
