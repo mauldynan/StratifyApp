@@ -11,14 +11,16 @@ import com.example.scrum_section.model.Task
 import com.example.stratify.R
 
 class TaskDetailDialog(private val task: Task) : DialogFragment() {
+    /**
+     * Creates and configures the dialog for displaying task details.
+     */
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = Dialog(requireContext())
 
-        // Hilangkan title bar
+        // Remove the title bar from the dialog.
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_task_detail)
 
-        // Ambil view
         val tvName = dialog.findViewById<TextView>(R.id.tvName)
         val tvDeadline = dialog.findViewById<TextView>(R.id.tvDeadline)
         val tvDepartment = dialog.findViewById<TextView>(R.id.tvDepartment)
@@ -26,24 +28,21 @@ class TaskDetailDialog(private val task: Task) : DialogFragment() {
         val btnClose = dialog.findViewById<TextView>(R.id.btnClose)
         val underlineView = dialog.findViewById<View>(R.id.underlineView)
 
-        // Isi data
         tvName.text = task.name
         tvDeadline.text = task.deadline
         tvDepartment.text = task.department
-        tvDescription.text =
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+        tvDescription.text = task.description
 
-        // Biar garis di bawah judul sesuai panjang teks
+        // Adjust the width of the underline view to match the width of the task name.
         tvName.post {
             val params = underlineView.layoutParams
             params.width = tvName.width
             underlineView.layoutParams = params
         }
 
-        // Tombol Close
+        // Set an OnClickListener for the close button to dismiss the dialog.
         btnClose.setOnClickListener { dismiss() }
 
-        // Atur ukuran & tampilan dialog
         dialog.window?.setLayout(
             (resources.displayMetrics.widthPixels * 0.8).toInt(),
             ViewGroup.LayoutParams.WRAP_CONTENT

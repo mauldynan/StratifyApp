@@ -14,7 +14,8 @@ class FragmentDashboard : Fragment() {
     private val binding get() = _binding!!
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentDashboardBinding.inflate(inflater, container, false)
@@ -24,9 +25,11 @@ class FragmentDashboard : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Navigate to Full Analysis
         binding.btnViewFullAnalysis.setOnClickListener {
             findNavController().navigate(R.id.action_dashboardFragment_to_fullAnalysisFragment)
         }
+
     }
 
     override fun onDestroyView() {

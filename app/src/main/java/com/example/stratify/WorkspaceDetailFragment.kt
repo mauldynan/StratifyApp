@@ -1,5 +1,9 @@
 package com.example.stratify
 
+import StatusAdapter
+import android.app.AlertDialog
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -7,29 +11,35 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.stratify.databinding.FragmentWorkspaceDetailBinding
-import java.util.Date
-
-
 
 class WorkspaceDetailFragment : Fragment() {
 
+    // View binding for the fragment's layout.
     private var _binding: FragmentWorkspaceDetailBinding? = null
     private val binding get() = _binding!!
 
+    // Arguments passed from the previous fragment, including the workspace object.
     private val args: WorkspaceDetailFragmentArgs by navArgs()
+    // ViewModel associated with this fragment for managing UI-related data.
+    private val viewModel: WorkspaceDetailViewModel by viewModels()
 
-    private val informationList = mutableListOf<InformationItem>()
-    private lateinit var informationAdapter: InformationAdapter
-    private var isDeleteMode: Boolean = false
+    // Adapters for the status and progress RecyclerViews.
+    private lateinit var statusAdapter: StatusAdapter
+    private lateinit var progressAdapter: ProgressAdapter
 
+    /**
+     * Inflates the layout for this fragment using view binding.
+     */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -38,130 +48,181 @@ class WorkspaceDetailFragment : Fragment() {
         return binding.root
     }
 
+    /**
+     * Called when the fragment's view has been created. Initializes UI components, observers, and listeners.
+     */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // --- MENGATUR TAMPILAN AWAL ---
+        // --- SET INITIAL DISPLAY --- //
         binding.tvWorkspaceTitle.text = args.workspace.name
-        binding.chipMembers.text = "No member"
+        binding.tvWorkspaceId.text = args.workspace.id
+        binding.tvPassword.text = args.workspace.password
+        updateMemberCountUI()
+        updateStatusUI(args.workspace.status)
 
-        val initialStatusColor = when (args.workspace.status) {
+        // --- ENABLE ALL FEATURES --- //
+        setupInlineEditor()
+        setupCopyListeners()
+        setupStatusDropdown()
+        setupProgressSection()
+
+        // --- OBSERVERS --- //
+        // Observe the progress list from the ViewModel and update the adapter.
+        viewModel.progressList.observe(viewLifecycleOwner) {
+            progressAdapter.submitList(it)
+        }
+
+        // --- BUTTON LISTENERS --- //
+        binding.btnBack.setOnClickListener {
+            findNavController().navigateUp()
+        }
+
+        binding.chipMembers.setOnClickListener {
+            // Show the members dialog.
+            val membersDialog = MembersDialogFragment.newInstance(args.workspace.members.toTypedArray())
+            membersDialog.show(childFragmentManager, "MembersDialog")
+        }
+    }
+
+    /**
+     * Configures the RecyclerView for progress items and sets up listeners for adding new progress.
+     */
+    private fun setupProgressSection() {
+        // Initialize the adapter with a callback for delete actions.
+        progressAdapter = ProgressAdapter(emptyList()) { progressItem ->
+            showDeleteConfirmationDialog(progressItem)
+        }
+        binding.rvProgressList.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = progressAdapter
+        }
+
+        // Show the add progress card when the button is clicked.
+        binding.btnAddProgress.setOnClickListener {
+            binding.cardAddProgress.isVisible = true
+            binding.btnAddProgress.isVisible = false
+        }
+
+        // Save the new progress when the save button is clicked.
+        binding.btnSaveProgress.setOnClickListener {
+            val progressText = binding.etProgressText.text.toString().trim()
+            if (progressText.isNotEmpty()) {
+                viewModel.addProgress(progressText)
+                binding.etProgressText.text.clear()
+                hideKeyboard(it)
+                // Hide the input card and show the add button again.
+                binding.cardAddProgress.isVisible = false
+                binding.btnAddProgress.isVisible = true
+            } else {
+                Toast.makeText(context, "Progress text cannot be empty", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    /**
+     * Displays a confirmation dialog before deleting a progress item.
+     */
+    private fun showDeleteConfirmationDialog(progressItem: ProgressItem) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete Progress")
+            .setMessage("Are you sure you want to delete this progress item?")
+            .setPositiveButton("Delete") { _, _ ->
+                viewModel.removeProgress(progressItem)
+                Toast.makeText(context, "Progress deleted successfully", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    /**
+     * Updates the member chip text based on the number of members.
+     */
+    private fun updateMemberCountUI() {
+        val memberCount = args.workspace.members.size
+        binding.chipMembers.text = when (memberCount) {
+            0 -> "No member"
+            1 -> "1 Member"
+            else -> "$memberCount Members"
+        }
+    }
+
+    /**
+     * Sets up the RecyclerView that acts as a dropdown for workspace status.
+     */
+    private fun setupStatusDropdown() {
+        val statusOptions = listOf("To Do", "In Progress", "To Verify", "Done")
+        statusAdapter = StatusAdapter(statusOptions) { selectedStatus ->
+            updateStatusUI(selectedStatus) // Update the button appearance.
+            binding.rvStatusOptions.isVisible = false // Hide the dropdown.
+            args.workspace.status = selectedStatus // Update the workspace object.
+            sendResultBack() // Send the updated object back to the previous fragment.
+        }
+
+        binding.rvStatusOptions.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = statusAdapter
+        }
+
+        // Toggle the visibility of the status dropdown.
+        binding.btnStatus.setOnClickListener {
+            binding.rvStatusOptions.isVisible = !binding.rvStatusOptions.isVisible
+        }
+    }
+
+    /**
+     * Updates the status button's text and background color based on the selected status.
+     */
+    private fun updateStatusUI(status: String) {
+        binding.tvStatusText.text = status
+        val colorRes = when (status) {
             "In Progress" -> R.color.status_inprogress
             "To Verify" -> R.color.status_toverify
             "Done" -> R.color.status_done
             else -> R.color.status_todo
         }
-        binding.tvStatusText.text = args.workspace.status
-        binding.btnStatus.backgroundTintList = ContextCompat.getColorStateList(requireContext(), initialStatusColor)
+        binding.btnStatus.backgroundTintList = ContextCompat.getColorStateList(requireContext(), colorRes)
+    }
 
-        // --- MENGAKTIFKAN SEMUA FITUR ---
-        setupInlineEditor()
-        setupInformationList()
-        updateDeleteModeUI()
-
-        // --- LISTENER UNTUK TOMBOL ---
-        binding.btnBack.setOnClickListener {
-            findNavController().navigateUp()
+    /**
+     * Sets up click listeners for copying the workspace ID and password.
+     */
+    private fun setupCopyListeners() {
+        binding.btnCopyWorkspaceId.setOnClickListener {
+            copyToClipboard("Workspace ID", binding.tvWorkspaceId.text.toString())
         }
-
-        binding.btnToggleDeleteMode.setOnClickListener {
-            isDeleteMode = !isDeleteMode
-            updateDeleteModeUI()
-        }
-
-        binding.btnAddInfo.setOnClickListener {
-            informationList.forEach { it.isEditing = false }
-            val newItem = InformationItem(details = "", isEditing = true)
-            informationList.add(newItem)
-            informationAdapter.notifyDataSetChanged()
-            binding.rvInformation.scrollToPosition(informationList.size - 1)
-        }
-
-        binding.btnConfirmDelete.setOnClickListener {
-            val itemsToDelete = informationList.filter { it.isSelectedForDeletion }
-            if (itemsToDelete.isNotEmpty()) {
-                informationList.removeAll(itemsToDelete.toSet())
-                informationAdapter.notifyDataSetChanged()
-            }
-            isDeleteMode = false
-            updateDeleteModeUI()
-        }
-
-        binding.btnStatus.setOnClickListener {
-            val statusDialog = StatusDialogFragment()
-            statusDialog.show(childFragmentManager, "StatusDialog")
-        }
-
-        binding.chipMembers.setOnClickListener {
-            val membersDialog = MembersDialogFragment()
-            membersDialog.show(childFragmentManager, "MembersDialog")
-        }
-
-        childFragmentManager.setFragmentResultListener("status_request", viewLifecycleOwner) { _, bundle ->
-            val newStatusName = bundle.getString("new_status_name") ?: "To Do"
-            val newStatusColor = bundle.getInt("new_status_color") ?: R.color.status_todo
-
-            binding.tvStatusText.text = newStatusName
-            binding.btnStatus.backgroundTintList = ContextCompat.getColorStateList(requireContext(), newStatusColor)
-
-            args.workspace.status = newStatusName
-            sendResultBack()
+        binding.btnCopyPassword.setOnClickListener {
+            copyToClipboard("Password", binding.tvPassword.text.toString())
         }
     }
 
+    /**
+     * Copies the given text to the system clipboard and shows a confirmation toast.
+     */
+    private fun copyToClipboard(label: String, text: String) {
+        val clipboard = context?.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val clip = ClipData.newPlainText(label, text)
+        clipboard?.setPrimaryClip(clip)
+        Toast.makeText(context, "$label copied to clipboard", Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Sends the updated workspace object back to the previous fragment using FragmentResultListener.
+     */
     private fun sendResultBack() {
         parentFragmentManager.setFragmentResult("workspace_update_request", bundleOf("updated_workspace" to args.workspace))
     }
 
-    // --- FUNGSI UNTUK MENGATUR MODE DELETE ---
-    private fun updateDeleteModeUI() {
-        if (::informationAdapter.isInitialized) {
-            informationAdapter.setDeleteMode(isDeleteMode)
-        }
-        if (!isDeleteMode) {
-            informationList.forEach { it.isSelectedForDeletion = false }
-        }
-        binding.btnToggleDeleteMode.text = if (isDeleteMode) "Cancel" else "Delete"
-        binding.btnConfirmDelete.isVisible = isDeleteMode
-        binding.btnAddInfo.isVisible = !isDeleteMode
-    }
+    // --- INLINE EDITING LOGIC --- //
 
-    // --- FUNGSI UNTUK SETUP RECYCLERVIEW ---
-    private fun setupInformationList() {
-        informationAdapter = InformationAdapter(
-            items = informationList,
-            onActionClick = { item, position ->
-                if (!isDeleteMode) {
-                    if (item.isEditing) {
-                        item.isEditing = false
-                        val holder = binding.rvInformation.findViewHolderForAdapterPosition(position) as? InformationAdapter.InformationViewHolder
-                        item.details = holder?.binding?.etInfoDetails?.text.toString().ifBlank { "Empty Information" }
-                    } else {
-                        item.isSaved = !item.isSaved
-                        item.savedDate = if (item.isSaved) Date() else null
-                    }
-                    informationAdapter.notifyItemChanged(position)
-                }
-            },
-            onTextChange = { item, newText ->
-                item.details = newText.ifBlank { "Empty Information" }
-                item.isEditing = false
-                informationAdapter.notifyDataSetChanged()
-            }
-        )
-
-        binding.rvInformation.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = informationAdapter
-        }
-    }
-
-    // --- FUNGSI UNTUK LOGIKA INLINE EDITING ---
+    /**
+     * Configures the inline editing functionality for the Department and Details fields.
+     */
     private fun setupInlineEditor() {
-        // Setup untuk Departemen
+        // Setup for Department field
         binding.tvDepartmentName.text = args.workspace.department.ifBlank { "Click here" }
         binding.tvDepartmentName.setOnClickListener {
-            if (!isDeleteMode) toggleDepartmentEdit(true)
+            toggleDepartmentEdit(true)
         }
         binding.etDepartmentName.setOnEditorActionListener { textView, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -176,7 +237,7 @@ class WorkspaceDetailFragment : Fragment() {
             false
         }
         binding.etDepartmentName.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
+            if (!hasFocus) { // Save when the EditText loses focus
                 val newText = binding.etDepartmentName.text.toString()
                 binding.tvDepartmentName.text = newText.ifBlank { "Click here" }
                 args.workspace.department = newText
@@ -185,10 +246,10 @@ class WorkspaceDetailFragment : Fragment() {
             }
         }
 
-        // Setup untuk Details
+        // Setup for Details field
         binding.tvDetailsContent.text = args.workspace.details.ifBlank { "Click here" }
         binding.tvDetailsContent.setOnClickListener {
-            if (!isDeleteMode) toggleDetailsEdit(true)
+            toggleDetailsEdit(true)
         }
         binding.btnSaveDetails.setOnClickListener {
             val newText = binding.etDetailsContent.text.toString()
@@ -200,6 +261,9 @@ class WorkspaceDetailFragment : Fragment() {
         }
     }
 
+    /**
+     * Toggles the UI between display mode (TextView) and edit mode (EditText) for the Department field.
+     */
     private fun toggleDepartmentEdit(isEditing: Boolean) {
         binding.tvDepartmentName.isVisible = !isEditing
         binding.etDepartmentName.isVisible = isEditing
@@ -213,6 +277,9 @@ class WorkspaceDetailFragment : Fragment() {
         }
     }
 
+    /**
+     * Toggles the UI between display mode (TextView) and edit mode (EditText) for the Details field.
+     */
     private fun toggleDetailsEdit(isEditing: Boolean) {
         binding.tvDetailsContent.isVisible = !isEditing
         binding.editDetailsGroup.isVisible = isEditing
@@ -226,7 +293,7 @@ class WorkspaceDetailFragment : Fragment() {
         }
     }
 
-    // --- FUNGSI BANTU UNTUK KEYBOARD ---
+    // --- KEYBOARD HELPER FUNCTIONS --- //
     private fun hideKeyboard(view: View) {
         val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         imm?.hideSoftInputFromWindow(view.windowToken, 0)

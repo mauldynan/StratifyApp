@@ -1,5 +1,6 @@
 package com.example.stratify
 
+import StatusAdapter
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -46,32 +47,34 @@ class StatusDialogFragment : DialogFragment() {
             StatusOption("To Verify", R.color.status_toverify),
             StatusOption("Done", R.color.status_done)
         )
-        // Set status awal
+        // Set initial status
         selectedStatus = statusOptions[0]
         updateSelectedStatusView()
 
-        // Setup RecyclerView untuk dropdown
-        val statusAdapter = StatusAdapter(statusOptions) { option ->
-            selectedStatus = option
+        // Setup RecyclerView for dropdown
+        val statusNames = statusOptions.map { it.name }
+        val statusAdapter = StatusAdapter(statusNames) { option ->
+            selectedStatus = statusOptions.first { it.name == option }
             updateSelectedStatusView()
-            binding.rvStatusOptions.isVisible = false // Sembunyikan dropdown setelah memilih
+            binding.rvStatusOptions.isVisible = false
         }
+
         binding.rvStatusOptions.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = statusAdapter
         }
 
-        // Tampilkan/sembunyikan dropdown saat "tombol" status diklik
+        // Show/hide dropdown when status "button" is clicked
         binding.btnCurrentStatus.setOnClickListener {
             binding.rvStatusOptions.isVisible = !binding.rvStatusOptions.isVisible
         }
 
-        // Listener untuk tombol close (X)
+        // Listener for the close (X) button
         binding.btnClose.setOnClickListener {
             dismiss()
         }
 
-        // Atur listener untuk tombol Done
+        // Set a listener for the Done button
         binding.btnDoneStatus.setOnClickListener {
             setFragmentResult("status_request", bundleOf(
                 "new_status_name" to selectedStatus.name,
@@ -83,9 +86,9 @@ class StatusDialogFragment : DialogFragment() {
     }
 
     private fun updateSelectedStatusView() {
-        // Update teks di TextView bagian dalam
+        // Update the text in the inner TextView
         binding.tvStatusText.text = selectedStatus.name
-        // Update warna background di ConstraintLayout luar
+        // Update background color in outer ConstraintLayout
         binding.btnCurrentStatus.backgroundTintList = ContextCompat.getColorStateList(requireContext(), selectedStatus.colorResId)
     }
 

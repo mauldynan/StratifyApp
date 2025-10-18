@@ -12,12 +12,13 @@ object TaskRepository {
         tasks.add(task)
     }
 
-    // Versi lama (biarin tetap ada kalau ada kode lain yang masih pakai index)
+    fun deleteTask(taskId: Int) {
+        tasks.removeAll { it.id == taskId }
+    }
+
     fun updateTask(index: Int, updatedTask: Task) {
         tasks[index] = updatedTask
     }
-
-    // 🔹 Versi baru (biar kompatibel sama adapter kamu
 
     fun updateTask(updatedTask: Task) {
         val index = tasks.indexOfFirst { it.id == updatedTask.id }
@@ -25,7 +26,6 @@ object TaskRepository {
             tasks[index] = updatedTask
         }
     }
-
 
     fun getTasksByStatus(status: TaskStatus): List<Task> {
         return if (status == TaskStatus.ALL) {
@@ -35,11 +35,11 @@ object TaskRepository {
         }
     }
 
-    // Contoh data awal
+    // Dummy data
     init {
-        tasks.add(Task(1, "Design UI", "Reza", "7 Oktober 2025", "Frontend", TaskStatus.TODO))
-        tasks.add(Task(2, "Setup Database", "Hansen", "8 Oktober 2025", "Backend", TaskStatus.IN_PROGRESS))
-        tasks.add(Task(3, "Integrate API", "Reza", "9 Oktober 2025", "Backend", TaskStatus.TO_VERIFY))
-        tasks.add(Task(4, "Testing", "Hansen", "10 Oktober 2025", "QA", TaskStatus.DONE))
+        tasks.add(Task(1, "Design UI", "Reza", "7 Oktober 2025", "Frontend", "Create a modern and intuitive user interface", TaskStatus.TODO))
+        tasks.add(Task(2, "Setup Database", "Hansen", "8 Oktober 2025", "Backend", "Set up the primary database schema and tables", TaskStatus.IN_PROGRESS))
+        tasks.add(Task(3, "Integrate API", "Reza", "9 Oktober 2025", "Backend", "Integrate the new payment gateway API", TaskStatus.TO_VERIFY))
+        tasks.add(Task(4, "Testing", "Hansen", "10 Oktober 2025", "QA", "Perform a full regression test on the new features", TaskStatus.DONE))
     }
 }

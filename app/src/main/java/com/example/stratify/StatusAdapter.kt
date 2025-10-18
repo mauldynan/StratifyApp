@@ -1,43 +1,36 @@
-package com.example.stratify
-
-import android.view.LayoutInflater
+// Corrected StatusAdapter.kt
+import android.view.LayoutInflater    import android.view.View
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
+import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.example.stratify.databinding.ItemStatusOptionBinding
-
-data class StatusOption(val name: String, val colorResId: Int)
 
 class StatusAdapter(
-    private val options: List<StatusOption>,
-    private val onOptionClick: (StatusOption) -> Unit
+    private val statusList: List<String>,
+    private val onItemClick: (String) -> Unit // Add this parameter
 ) : RecyclerView.Adapter<StatusAdapter.StatusViewHolder>() {
 
-    inner class StatusViewHolder(val binding: ItemStatusOptionBinding) : RecyclerView.ViewHolder(binding.root)
+    inner class StatusViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val statusName: TextView = itemView.findViewById(android.R.id.text1) // Example ID, adjust if needed
+
+        fun bind(status: String) {
+            statusName.text = status
+            itemView.setOnClickListener {
+                onItemClick(status) // Call the lambda when an item is clicked
+            }
+        }
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StatusViewHolder {
-        val binding = ItemStatusOptionBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return StatusViewHolder(binding)
+        // Use a simple built-in layout for demonstration. You might have a custom one.
+        val view = LayoutInflater.from(parent.context)
+            .inflate(android.R.layout.simple_list_item_1, parent, false)
+        return StatusViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: StatusViewHolder, position: Int) {
-        val option = options[position]
-        holder.binding.tvStatusName.text = option.name
-
-        // Logika untuk memilih background dengan sudut yang benar
-        val backgroundRes = when (position) {
-            0 -> R.drawable.dropdown_top_item_background // Item pertama
-            options.size - 1 -> R.drawable.dropdown_bottom_item_background // Item terakhir
-            else -> R.drawable.dropdown_middle_item_background // Item di tengah
-        }
-        holder.itemView.setBackgroundResource(backgroundRes)
-        // Menerapkan warna status yang sesuai
-        holder.itemView.backgroundTintList = ContextCompat.getColorStateList(holder.itemView.context, option.colorResId)
-
-        holder.itemView.setOnClickListener {
-            onOptionClick(option)
-        }
+        holder.bind(statusList[position])
     }
 
-    override fun getItemCount(): Int = options.size
+    override fun getItemCount(): Int = statusList.size
 }
+    

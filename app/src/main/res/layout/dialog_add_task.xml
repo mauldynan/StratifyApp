@@ -54,11 +54,31 @@
         android:id="@+id/etDepartment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="12dp"
         android:background="@drawable/edittext_outline"
         android:hint="Department"
         android:padding="10dp"
         android:textColor="#800000"/>
+
+    <!-- Description -->
+    <TextView
+        android:text="Description"
+        android:textStyle="bold"
+        android:textColor="#800000"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
+    <EditText
+        android:id="@+id/etDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/edittext_outline"
+        android:hint="Description"
+        android:padding="10dp"
+        android:textColor="#800000"
+        android:minLines="3"
+        android:gravity="top"/>
 
     <!-- Tombol Add / Update -->
     <androidx.appcompat.widget.AppCompatButton
@@ -70,8 +90,5 @@
         android:textStyle="bold"
         android:textColor="#760000"
         android:background="@drawable/bg_button_yellow"/>
-
-
-
 
 </LinearLayout>

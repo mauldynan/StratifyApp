@@ -19,23 +19,53 @@
 
         <TextView
             android:id="@+id/tv_task_name"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
             tools:text="Task 1 Name"
             android:textColor="@color/white"
             android:textSize="22sp"
             android:textStyle="bold"
             android:fontFamily="serif"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"/>
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btn_delete_workspace"/>
+
+        <ImageButton
+            android:id="@+id/btn_delete_workspace"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_delete"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/white"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:contentDescription="Delete Workspace" />
+
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/status_indicator_background"
+            android:paddingStart="32dp"
+            android:paddingEnd="32dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_task_name"
+            tools:text="To Do"
+            tools:backgroundTint="@color/status_todo"/>
 
         <de.hdodenhof.circleimageview.CircleImageView
             android:id="@+id/iv_profile"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="8dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tv_task_name"
+            app:layout_constraintTop_toBottomOf="@id/tv_status"
             tools:src="@tools:sample/avatars" />
 
         <TextView
@@ -46,24 +76,8 @@
             tools:text="by Keonho"
             android:textColor="@color/white"
             app:layout_constraintStart_toEndOf="@id/iv_profile"
-            app:layout_constraintBottom_toBottomOf="@id/iv_profile"
-            app:layout_constraintTop_toTopOf="@id/iv_profile"/>
-
-        <TextView
-            android:id="@+id/tv_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/status_indicator_background"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:textColor="@color/white"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:text="To Do"
-            tools:backgroundTint="@color/status_todo"/>
+            app:layout_constraintTop_toTopOf="@id/iv_profile"
+            app:layout_constraintBottom_toBottomOf="@id/iv_profile" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

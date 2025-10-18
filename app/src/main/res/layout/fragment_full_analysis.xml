@@ -5,6 +5,10 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <include
+        android:id="@+id/header"
+        layout="@layout/header_full_analysis" />
+
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -16,35 +20,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
-
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:paddingBottom="4dp">
-
-                <ImageView
-                    android:id="@+id/btnBack"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_back"
-                    android:layout_alignParentStart="true"
-                    android:layout_centerVertical="true"
-                    android:contentDescription="Back Button"
-                    android:padding="12dp"
-                    android:clickable="true"
-                    android:focusable="true" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Full Analysis"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/maroon_primary"
-                    android:layout_centerHorizontal="true"
-                    android:layout_centerVertical="true" />
-            </RelativeLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -61,7 +36,8 @@
                     android:layout_marginEnd="12dp" />
 
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
@@ -116,40 +92,44 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="20dp"
-                android:paddingBottom="12dp"
+                android:layout_marginTop="16dp"
                 android:elevation="4dp">
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Dominant Keywords"
+                    android:textAlignment="center"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="@color/maroon_primary"
-                    android:paddingTop="12dp"
                     android:paddingStart="12dp"
-                    android:paddingEnd="12dp"
-                    android:layout_marginBottom="12dp" />
+                    android:paddingEnd="12dp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="12dp"
-                    android:weightSum="2">
+                    android:weightSum="2"
+                    android:padding="10dp"
+                    android:gravity="center">
 
+                    <!-- ✅ Positive Section -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="8dp"
-                        android:background="@drawable/bg_positive_keywords"
-                        android:layout_marginEnd="8dp"
-                        android:elevation="2dp"
-                        android:clipToPadding="false">
+                        android:padding="12dp"
+                        android:layout_marginEnd="6dp"
+                        android:backgroundTint="#E8F9EE"
+                        android:background="@android:color/white"
+                        android:elevation="3dp"
+                        android:clipToPadding="false"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:backgroundTintMode="src_over"
+                        android:clipChildren="false"
+                        android:translationZ="2dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -158,6 +138,13 @@
                             android:textStyle="bold"
                             android:textSize="15sp"
                             android:textColor="@color/green"
+                            android:layout_marginBottom="6dp"
+                            android:letterSpacing="0.03" />
+
+                        <View
+                            android:layout_width="30dp"
+                            android:layout_height="2dp"
+                            android:background="@color/green"
                             android:layout_marginBottom="8dp" />
 
                         <TextView
@@ -165,20 +152,26 @@
                             android:layout_height="wrap_content"
                             android:text="• Good promo\n• Free shipping\n• Nice app"
                             android:textSize="13sp"
-                            android:lineSpacingExtra="4dp"
+                            android:lineSpacingExtra="5dp"
                             android:textColor="@color/black" />
                     </LinearLayout>
 
+                    <!-- ❌ Negative Section -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="8dp"
-                        android:background="@drawable/bg_negative_keywords"
-                        android:layout_marginStart="8dp"
-                        android:elevation="2dp"
-                        android:clipToPadding="false">
+                        android:padding="12dp"
+                        android:layout_marginStart="6dp"
+                        android:background="@android:color/white"
+                        android:backgroundTint="#FFF1F1"
+                        android:backgroundTintMode="src_over"
+                        android:elevation="3dp"
+                        android:clipToPadding="false"
+                        android:foreground="?attr/selectableItemBackground"
+                        android:clipChildren="false"
+                        android:translationZ="2dp">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -187,6 +180,13 @@
                             android:textStyle="bold"
                             android:textSize="15sp"
                             android:textColor="@color/red"
+                            android:layout_marginBottom="6dp"
+                            android:letterSpacing="0.03" />
+
+                        <View
+                            android:layout_width="30dp"
+                            android:layout_height="2dp"
+                            android:background="@color/red"
                             android:layout_marginBottom="8dp" />
 
                         <TextView
@@ -194,61 +194,50 @@
                             android:layout_height="wrap_content"
                             android:text="• Bug\n• Lambat\n• Sulit digunakan"
                             android:textSize="13sp"
-                            android:lineSpacingExtra="4dp"
+                            android:lineSpacingExtra="5dp"
                             android:textColor="@color/black" />
                     </LinearLayout>
+
                 </LinearLayout>
+
             </LinearLayout>
 
-            <HorizontalScrollView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:scrollbars="none"
-                android:clipToPadding="false">
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp"
+                android:weightSum="3">
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                <Button
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="35dp"
+                    android:text="Latest"
+                    android:background="@drawable/rounded_button_bg"
+                    android:textColor="@color/white"
+                    android:textSize="10sp"
+                    android:layout_marginEnd="8dp"/>
 
-                    <Button
-                        android:layout_width="wrap_content"
-                        android:layout_height="35dp"
-                        android:text="Latest"
-                        android:background="@drawable/rounded_button_bg"
-                        android:textColor="@color/white"
-                        android:textSize="10sp"
-                        android:layout_marginEnd="6dp"/>
+                <Button
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="35dp"
+                    android:text="Positive"
+                    android:background="@drawable/rounded_button_bg"
+                    android:textColor="@color/white"
+                    android:textSize="10sp"
+                    android:layout_marginEnd="8dp"/>
 
-                    <Button
-                        android:layout_width="wrap_content"
-                        android:layout_height="35dp"
-                        android:text="Rating"
-                        android:background="@drawable/rounded_button_bg"
-                        android:textColor="@color/white"
-                        android:textSize="10sp"
-                        android:layout_marginEnd="6dp"/>
-
-                    <Button
-                        android:layout_width="wrap_content"
-                        android:layout_height="35dp"
-                        android:text="Positive"
-                        android:background="@drawable/rounded_button_bg"
-                        android:textColor="@color/white"
-                        android:textSize="10sp"
-                        android:layout_marginEnd="6dp"/>
-
-                    <Button
-                        android:layout_width="wrap_content"
-                        android:layout_height="35dp"
-                        android:text="Negative"
-                        android:background="@drawable/rounded_button_bg"
-                        android:textColor="@color/white"
-                        android:textSize="10sp"/>
-                </LinearLayout>
-            </HorizontalScrollView>
+                <Button
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="35dp"
+                    android:text="Negative"
+                    android:background="@drawable/rounded_button_bg"
+                    android:textColor="@color/white"
+                    android:textSize="10sp"/>
+            </LinearLayout>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -256,7 +245,7 @@
                 android:text="Reviews"
                 android:textStyle="bold"
                 android:textSize="16sp"
-                android:layout_marginTop="20dp"/>
+                android:layout_marginTop="12dp"/>
 
             <LinearLayout
                 android:layout_width="match_parent"

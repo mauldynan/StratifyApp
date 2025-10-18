@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/button_yellow"
+    android:background="@color/white"
     tools:context=".ProfileEditFragment">
 
     <ImageView
@@ -13,17 +13,19 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
+        android:contentDescription="Back"
         android:padding="8dp"
         android:src="@drawable/ic_arrow_back"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:contentDescription="Back" />
+        app:tint="@color/maroon_primary" />
 
     <TextView
         android:id="@+id/tv_profile_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Profile"
+        android:textColor="@color/maroon_primary"
         android:textSize="20sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@+id/iv_back"
@@ -47,14 +49,14 @@
         android:id="@+id/iv_edit_photo_icon"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:src="@drawable/ic_edit_circle"
         android:background="@drawable/circle_background"
+        android:contentDescription="Edit Photo"
         android:padding="8dp"
+        android:src="@drawable/ic_edit_circle"
         app:layout_constraintCircle="@id/iv_profile_image_edit"
         app:layout_constraintCircleAngle="135"
         app:layout_constraintCircleRadius="60dp"
-        tools:ignore="MissingConstraints"
-        android:contentDescription="Edit Photo"/>
+        tools:ignore="MissingConstraints" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/til_name"

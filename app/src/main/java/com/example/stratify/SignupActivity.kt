@@ -17,10 +17,14 @@ class SignupActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
     private lateinit var binding: ActivitySignupBinding
 
+    // Regex pattern for strong password validation.
     private val passwordPattern = Pattern.compile(
         "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$"
     )
 
+    /**
+     * Initializes the activity, sets up the layout, and configures event listeners.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySignupBinding.inflate(layoutInflater)
@@ -29,26 +33,28 @@ class SignupActivity : AppCompatActivity() {
 
         auth = FirebaseAuth.getInstance()
 
-        // Validasi password saat user mengetik
+        // Set up real-time password validation as the user types.
         setupPasswordValidation()
 
+        // Set a click listener for the sign-in link to navigate to the LoginActivity.
         binding.signInTextLink.setOnClickListener {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }
 
+        // Set a click listener for the sign-up button.
         binding.signupButton.setOnClickListener {
             val email = binding.emailInputEdittext.text.toString().trim()
             val password = binding.passwordInputEdittext.text.toString().trim()
             val confirmPassword = binding.confirmPasswordInputEdittext.text.toString().trim()
 
-            // Validasi: Pastikan semua field terisi
+            // Validate that all fields are filled.
             if (email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
                 Toast.makeText(this, "Please fill in all fields.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            // Validasi: Pastikan password dan konfirmasi password sama
+            // Validate that the passwords match.
             if (password != confirmPassword) {
                 binding.passwordValidationText.visibility = View.VISIBLE
                 binding.passwordValidationText.setTextColor(Color.RED)
@@ -56,7 +62,7 @@ class SignupActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Validasi: Pastikan password sesuai kriteria
+            // Validate that the password meets the strength criteria.
             if (!passwordPattern.matcher(password).matches()) {
                 binding.passwordValidationText.visibility = View.VISIBLE
                 binding.passwordValidationText.setTextColor(Color.RED)
@@ -64,7 +70,7 @@ class SignupActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Lanjutkan proses signup Firebase
+            // Proceed with Firebase user creation.
             auth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
                     Toast.makeText(this, "Account created successfully!", Toast.LENGTH_SHORT).show()
@@ -77,6 +83,9 @@ class SignupActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Sets up a TextWatcher to provide real-time feedback on password strength as the user types.
+     */
     private fun setupPasswordValidation() {
         binding.passwordInputEdittext.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -85,14 +94,18 @@ class SignupActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {
                 val password = s.toString().trim()
                 if (password.isEmpty()) {
+                    // Hide the validation text if the password field is empty.
                     binding.passwordValidationText.visibility = View.INVISIBLE
                     return
                 }
                 binding.passwordValidationText.visibility = View.VISIBLE
+                // Check if the password matches the pattern.
                 if (passwordPattern.matcher(password).matches()) {
+                    // If valid, show a green message.
                     binding.passwordValidationText.setTextColor(Color.GREEN)
                     binding.passwordValidationText.text = "Password is valid!"
                 } else {
+                    // If invalid, show a red message with the requirements.
                     binding.passwordValidationText.setTextColor(Color.RED)
                     binding.passwordValidationText.text = "Password must be at least 8 characters long, and contain a lowercase letter, an uppercase letter, a number and a symbol."
                 }

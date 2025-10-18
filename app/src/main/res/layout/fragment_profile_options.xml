@@ -3,10 +3,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="@color/button_yellow">
+    android:background="@color/white">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -20,7 +20,7 @@
             android:layout_width="60dp"
             android:layout_height="60dp"
             android:src="@drawable/ic_profile"
-            app:civ_border_color="@color/white"
+            app:civ_border_color="@color/maroon_primary"
             app:civ_border_width="2dp" />
 
         <LinearLayout
@@ -35,7 +35,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="User Name"
-                android:textColor="@android:color/black"
+                android:textColor="@color/maroon_primary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -52,7 +52,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="@color/grey_300"
+        android:background="@color/maroon_primary"
         android:layout_marginBottom="8dp"/>
 
     <TextView
@@ -75,6 +75,7 @@
         android:layout_height="wrap_content"
         android:text="Account"
         android:drawableStart="@drawable/ic_account"
+        android:drawableEnd="@drawable/ic_arrow_drop_down"
         android:drawablePadding="16dp"
         android:gravity="center_vertical"
         android:padding="12dp"
@@ -83,12 +84,39 @@
         android:focusable="true"
         android:textColor="@android:color/black"/>
 
+    <LinearLayout
+        android:id="@+id/account_options_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginStart="32dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/optionLogout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Log Out"
+            android:drawableStart="@drawable/ic_logout"
+            android:drawablePadding="16dp"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:textColor="@color/maroon_primary"
+            app:drawableTint="@color/maroon_primary" />
+
+    </LinearLayout>
+
     <TextView
         android:id="@+id/optionLanguage"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Language"
         android:drawableStart="@drawable/ic_language"
+        android:drawableEnd="@drawable/ic_arrow_drop_down"
         android:drawablePadding="16dp"
         android:gravity="center_vertical"
         android:padding="12dp"
@@ -96,5 +124,40 @@
         android:clickable="true"
         android:focusable="true"
         android:textColor="@android:color/black"/>
+
+    <LinearLayout
+        android:id="@+id/language_options_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginStart="32dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/optionEnglish"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="English"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:textColor="@color/maroon_primary"/>
+
+        <TextView
+            android:id="@+id/optionIndonesia"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Indonesia"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:textColor="@color/maroon_primary"/>
+
+    </LinearLayout>
 
 </LinearLayout>

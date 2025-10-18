@@ -4,10 +4,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="?attr/actionBarSize"
+    android:layout_height="wrap_content"
     android:background="@color/maroon_primary"
-    android:paddingStart="16dp"
-    android:paddingEnd="16dp">
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="8dp">
 
     <LinearLayout
         android:id="@+id/app_logo_container"
@@ -17,14 +17,14 @@
         android:gravity="center_vertical"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:paddingTop="24dp">
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <ImageView
             android:id="@+id/app_logo"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
+            android:layout_width="80dp"
+            android:layout_height="40dp"
             android:src="@drawable/logo_stratify3"
+            android:scaleType="fitCenter"
             tools:ignore="ContentDescription" />
 
     </LinearLayout>
@@ -36,8 +36,7 @@
         android:gravity="center_vertical"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:paddingTop="24dp">
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <ImageButton
             android:id="@+id/account_icon"

@@ -14,6 +14,9 @@ class MemberAdapter(private val members: List<Member>) : RecyclerView.Adapter<Me
         return MemberViewHolder(binding)
     }
 
+    /**
+     * Binds the data from a [Member] object to the views in the ViewHolder.
+     */
     override fun onBindViewHolder(holder: MemberViewHolder, position: Int) {
         val member = members[position]
         val memberName = if (member.isYou) "${member.name} (You)" else member.name

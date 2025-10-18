@@ -8,5 +8,6 @@ data class Task(
     var createdBy: String,
     var deadline: String,
     var department: String,
+    var description: String,
     var status: TaskStatus
 )
