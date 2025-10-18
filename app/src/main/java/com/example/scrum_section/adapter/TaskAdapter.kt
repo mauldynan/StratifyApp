@@ -1,5 +1,6 @@
 package com.example.scrum_section.adapter
 
+import android.app.AlertDialog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,22 +9,22 @@ import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.RecyclerView
 import com.example.stratify.R
 import com.example.scrum_section.EditTaskDialog
-import com.example.scrum_section.TaskDetailDialog   // Assuming this is also in the 'view' package
-import com.example.scrum_section.model.Task             // Corrected
-import com.example.scrum_section.util.TaskStatus         // Corrected
-import com.example.scrum_section.data.TaskRepository     // Corrected
+import com.example.scrum_section.TaskDetailDialog
+import com.example.scrum_section.model.Task
+import com.example.scrum_section.util.TaskStatus
+import com.example.scrum_section.data.TaskRepository
 
 
-class TaskAdapter(private var tasks: List<Task>) :
+class TaskAdapter(private var tasks: MutableList<Task>) :
     RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
 
     inner class TaskViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvName: TextView = itemView.findViewById(R.id.tvTaskName)
-        val tvCreatedBy: TextView = itemView.findViewById(R.id.tvCreatedBy)
         val tvDeadline: TextView = itemView.findViewById(R.id.tvDeadline)
         val tvStatus: TextView = itemView.findViewById(R.id.tvStatus)
         val imgAvatar: ImageView = itemView.findViewById(R.id.imgAvatar)
         val btnChangeStatus: ImageView = itemView.findViewById(R.id.btnChangeStatus)
+        val btnDeleteTask: ImageView = itemView.findViewById(R.id.btnDeleteTask)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
@@ -38,7 +39,6 @@ class TaskAdapter(private var tasks: List<Task>) :
         val task = tasks[position]
 
         holder.tvName.text = task.name
-        holder.tvCreatedBy.text = "by ${task.createdBy}"
         holder.tvDeadline.text = task.deadline
         holder.tvStatus.text = task.status.name.replace("_", " ")
 
@@ -83,18 +83,36 @@ class TaskAdapter(private var tasks: List<Task>) :
             popup.show()
         }
 
-        // Klik pensil -> buka dialog edit
+        // Click edit icon -> the edit dialog will open
         holder.btnChangeStatus.setOnClickListener {
             val activity = holder.itemView.context as? FragmentActivity
             activity?.let {
                 val editDialog = EditTaskDialog(task) {
-                    notifyItemChanged(position)
+                    notifyItemChanged(holder.adapterPosition)
                 }
                 editDialog.show(it.supportFragmentManager, "edit_task")
             }
         }
 
-        // 🟢 Klik di mana pun pada item -> buka dialog detail task
+        // Click trash icon -> the delete confirmation dialog will open
+        holder.btnDeleteTask.setOnClickListener {
+            val context = holder.itemView.context
+            val currentPosition = holder.adapterPosition
+            if (currentPosition != RecyclerView.NO_POSITION) {
+                AlertDialog.Builder(context)
+                    .setTitle("Delete Task")
+                    .setMessage("Are you sure you want to delete this task?")
+                    .setPositiveButton("Yes") { _, _ ->
+                        TaskRepository.deleteTask(tasks[currentPosition].id)
+                        tasks.removeAt(currentPosition)
+                        notifyItemRemoved(currentPosition)
+                    }
+                    .setNegativeButton("No", null)
+                    .show()
+            }
+        }
+
+        // Click item -> the detail task dialog will open
         holder.itemView.setOnClickListener {
             val activity = holder.itemView.context as? FragmentActivity
             activity?.let {
@@ -105,7 +123,7 @@ class TaskAdapter(private var tasks: List<Task>) :
     }
 
     fun updateData(newList: List<Task>) {
-        tasks = newList
+        tasks = newList.toMutableList()
         notifyDataSetChanged()
     }
 }

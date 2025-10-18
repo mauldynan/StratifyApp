@@ -41,9 +41,12 @@ class LoginActivity : AppCompatActivity() {
             auth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this) { task ->
                     if (task.isSuccessful) {
-                        // Sign in successful, navigate to MainActivity
+                        // Sign in successful, navigate to the correct MainActivity
                         Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show()
-                        val intent = Intent(this, MainActivity::class.java)
+                        
+                        // Use a specific Intent to avoid ambiguity between the two MainActivity files
+                        val intent = Intent(this, com.example.stratify.MainActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         startActivity(intent)
                         finish() // Finish this activity so the user can't go back
                     }
@@ -72,6 +75,12 @@ class LoginActivity : AppCompatActivity() {
         // Handle Sign Up link click
         binding.signUpTextLink.setOnClickListener {
             val intent = Intent(this, SignupActivity::class.java)
+            startActivity(intent)
+        }
+
+        // Handle Forgot Password link click
+        binding.forgotPasswordText.setOnClickListener {
+            val intent = Intent(this, ForgotPasswordActivity::class.java)
             startActivity(intent)
         }
     }

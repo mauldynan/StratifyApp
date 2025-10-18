@@ -3,10 +3,10 @@
 
     <!--WORKSPACE-->
     <string name="content_desc_back_button">Kembali</string>
-    <string name="label_department">Departement:</string>
+    <string name="label_department">Departement</string>
 
     <!--DASHBOARD-->
-        <string name="label_details">Details:</string>
+        <string name="label_details">Description Task</string>
         <string name="status_todo">To Do</string>
         <string name="button_done">Done</string>
         <string name="title_information">Information</string>
@@ -22,9 +22,8 @@
             <item>Done</item>
         </string-array>
 
-    <!--SCRUM-->
     <string name="login_title">Welcome back</string>
-    <string name="login_desc">Please enter your details to Sign in</string>
+    <string name="login_desc">Please enter your details to sign in.</string>
     <string name="hint_email">Email</string>
     <string name="hint_password">Password</string>
     <string name="forgot_password">Forgot Password</string>

@@ -5,95 +5,147 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
-import androidx.fragment.app.DialogFragment
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import com.bumptech.glide.Glide
-import com.example.stratify.databinding.FragmentProfileOptionsBinding
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.example.stratify.R
+import com.example.stratify.view.profile.SharedViewModel
 import com.google.firebase.auth.FirebaseAuth
 
-class ProfileOptionsFragment : DialogFragment() {
+class ProfileOptionsFragment : Fragment() {
 
-    // 1. Define the listener interface
     interface OnOptionSelectedListener {
         fun onProfileEditSelected()
+        fun onLogoutSelected()
+        fun onEnglishSelected()
+        fun onIndonesianSelected()
         fun onAccountSelected()
+        fun onLanguageSelected()
     }
 
     private var listener: OnOptionSelectedListener? = null
-
-    private var _binding: FragmentProfileOptionsBinding? = null
-    private val binding get() = _binding!!
-
-    private lateinit var auth: FirebaseAuth
+    private val sharedViewModel: SharedViewModel by activityViewModels()
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        // Correctly get the listener from the activity or parent fragment
-        listener = when {
-            context is OnOptionSelectedListener -> context
-            parentFragment is OnOptionSelectedListener -> parentFragment as OnOptionSelectedListener
-            else -> null
+        if (context is OnOptionSelectedListener) {
+            listener = context
+        } else {
+            throw RuntimeException("$context must implement OnOptionSelectedListener")
         }
-    }
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        _binding = FragmentProfileOptionsBinding.inflate(inflater, container, false)
-
-        auth = FirebaseAuth.getInstance()
-
-        loadUserProfile()
-
-        binding.optionProfileEdit.setOnClickListener {
-            // 2. Call the listener and dismiss the dialog
-            if (listener != null) {
-                listener?.onProfileEditSelected()
-                dismiss()
-            } else {
-                // This else block is a fallback, in a correct implementation this should not be reached
-                Toast.makeText(requireContext(), "Error: Listener not implemented", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        binding.optionAccount.setOnClickListener {
-            // 2. Call the listener and dismiss the dialog
-            if (listener != null) {
-                listener?.onAccountSelected()
-                dismiss()
-            } else {
-                 // This else block is a fallback, in a correct implementation this should not be reached
-                Toast.makeText(requireContext(), "Error: Listener not implemented", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        binding.optionLanguage.setOnClickListener {
-            Toast.makeText(requireContext(), "Language settings coming soon!", Toast.LENGTH_SHORT).show()
-        }
-
-        return binding.root
-    }
-
-    private fun loadUserProfile() {
-        val user = auth.currentUser
-        if (user != null) {
-            binding.tvProfileName.text = user.displayName
-            binding.tvProfileEmail.text = user.email
-            user.photoUrl?.let {
-                Glide.with(this).load(it).circleCrop().into(binding.ivProfileImage)
-            }
-        }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 
     override fun onDetach() {
         super.onDetach()
         listener = null
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_profile_options, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val profileImage = view.findViewById<ImageView>(R.id.ivProfileImage)
+        val profileName = view.findViewById<TextView>(R.id.tvProfileName)
+
+        observeViewModel(profileImage, profileName)
+        setupClickListeners(view)
+
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        val view = view ?: return
+        val profileImage = view.findViewById<ImageView>(R.id.ivProfileImage)
+        val profileName = view.findViewById<TextView>(R.id.tvProfileName)
+        val profileEmail = view.findViewById<TextView>(R.id.tvProfileEmail)
+
+        if (profileImage != null && profileName != null && profileEmail != null) {
+            loadInitialData(profileImage, profileName, profileEmail)
+        }
+    }
+
+
+    private fun loadInitialData(imageView: ImageView, nameView: TextView, emailView: TextView) {
+        val user = FirebaseAuth.getInstance().currentUser ?: return
+
+        if (sharedViewModel.displayName.value == null && user.displayName != null) {
+            sharedViewModel.displayName.value = user.displayName
+        }
+        if (sharedViewModel.photoUri.value == null && user.photoUrl != null) {
+            sharedViewModel.photoUri.value = user.photoUrl
+        }
+
+        val initialName = sharedViewModel.displayName.value ?: user.displayName
+        val initialPhotoUri = sharedViewModel.photoUri.value ?: user.photoUrl
+
+        nameView.text = initialName
+        emailView.text = user.email
+
+        val placeholderResId = resources.getIdentifier("ic_profile", "drawable", requireContext().packageName)
+
+        Glide.with(this)
+            .load(initialPhotoUri)
+            .placeholder(placeholderResId.takeIf { it != 0 } ?: R.drawable.ic_profile)
+            .circleCrop()
+            .into(imageView)
+    }
+
+    private fun observeViewModel(imageView: ImageView, nameView: TextView) {
+        sharedViewModel.displayName.observe(viewLifecycleOwner) { newName ->
+            nameView.text = newName
+        }
+
+        sharedViewModel.photoUri.observe(viewLifecycleOwner) { newUri ->
+            Glide.with(this)
+                .load(newUri)
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .skipMemoryCache(true)
+                .placeholder(R.drawable.ic_profile)
+                .circleCrop()
+                .into(imageView)
+        }
+    }
+
+    private fun setupClickListeners(view: View) {
+        view.findViewById<TextView>(R.id.optionProfileEdit)?.setOnClickListener {
+            listener?.onProfileEditSelected()
+        }
+
+        view.findViewById<TextView>(R.id.optionLogout)?.setOnClickListener {
+            listener?.onLogoutSelected()
+        }
+
+        view.findViewById<TextView>(R.id.optionEnglish)?.setOnClickListener {
+            listener?.onEnglishSelected()
+        }
+        view.findViewById<TextView>(R.id.optionIndonesia)?.setOnClickListener {
+            listener?.onIndonesianSelected()
+        }
+
+        view.findViewById<TextView>(R.id.optionAccount)?.setOnClickListener {
+            listener?.onAccountSelected()
+            toggleVisibility(view.findViewById(R.id.account_options_container))
+        }
+        view.findViewById<TextView>(R.id.optionLanguage)?.setOnClickListener {
+            listener?.onLanguageSelected()
+            toggleVisibility(view.findViewById(R.id.language_options_container))
+        }
+    }
+
+    private fun toggleVisibility(container: LinearLayout?) {
+        container?.let {
+            it.visibility = if (it.visibility == View.GONE) View.VISIBLE else View.GONE
+        }
     }
 }

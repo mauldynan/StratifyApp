@@ -8,14 +8,17 @@ import androidx.appcompat.app.AppCompatActivity
 
 class SplashActivity : AppCompatActivity() {
 
+    /**
+     * Initializes the activity, sets the layout, and starts the delayed navigation.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
 
-        // Menggunakan Handler untuk menunda perpindahan halaman
-        // "5000" adalah 5 detik (5000 milidetik)
+        // Use a Handler to delay the transition to the next screen.
+        // The delay is 3000 milliseconds (3 seconds).
         Handler(Looper.getMainLooper()).postDelayed({
-            // Pindah ke LoginActivity
+            // Create an intent to navigate to LoginActivity.
             val intent = Intent(this, LoginActivity::class.java)
             startActivity(intent)
 

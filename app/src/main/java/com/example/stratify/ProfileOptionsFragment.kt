@@ -1,124 +1,112 @@
 package com.example.stratify
 
-import android.content.Context
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.fragment.app.DialogFragment
+import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
 import com.example.stratify.databinding.FragmentProfileOptionsBinding
+import com.example.stratify.view.profile.SharedViewModel
 import com.google.firebase.auth.FirebaseAuth
 
-class ProfileOptionsFragment : DialogFragment() {
-
-    // 1. DEFINE THE LISTENER INTERFACE
-    // This interface acts as a contract that the host must follow.
-    interface OnOptionSelectedListener {
-        fun onProfileEditSelected()
-        fun onAccountSelected()
-        fun onLanguagesSelected()
-    }
+class ProfileOptionsFragment : Fragment() {
 
     private var _binding: FragmentProfileOptionsBinding? = null
     private val binding get() = _binding!!
-    private lateinit var auth: FirebaseAuth
-
-    // 2. DECLARE THE LISTENER VARIABLE
-    private var listener: OnOptionSelectedListener? = null
-
-    // 3. IMPLEMENT onAttach TO CONNECT THE LISTENER
-    // This method is called when the dialog attaches to its host (Activity or Fragment).
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        // A dialog can be hosted by an Activity or a Fragment. We need to check both.
-        // First, check if the parent fragment implements the listener.
-        if (parentFragment is OnOptionSelectedListener) {
-            listener = parentFragment as OnOptionSelectedListener
-        }
-        // If not, check if the hosting activity implements the listener.
-        else if (context is OnOptionSelectedListener) {
-            listener = context
-        }
-        // If neither does, the dialog can't communicate. Crash with a helpful message.
-        else {
-            throw ClassCastException("$context must implement OnOptionSelectedListener")
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setStyle(STYLE_NO_FRAME, R.style.DialogAnimation)
-    }
+    private val sharedViewModel: SharedViewModel by activityViewModels()
+    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentProfileOptionsBinding.inflate(inflater, container, false)
-        dialog?.setCanceledOnTouchOutside(true)
         return binding.root
-    }
-
-    override fun onStart() {
-        super.onStart()
-        dialog?.window?.let {
-            it.setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            it.setGravity(Gravity.END)
-            it.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        auth = FirebaseAuth.getInstance()
-        loadUserProfile()
         setupClickListeners()
+        observeViewModel()
+        loadUserData()
     }
 
-    private fun loadUserProfile() {
-        val currentUser = auth.currentUser
-        currentUser?.let {
-            binding.tvProfileName.text = it.displayName ?: "No Name"
-            binding.tvProfileEmail.text = it.email ?: "No Email"
+    private fun setupClickListeners() = with(binding) {
+        // Navigate to Edit Profile
+        optionProfileEdit.setOnClickListener {
+            findNavController().navigate(R.id.action_profileOptionsFragment_to_profileEditFragment)
+        }
 
-            it.photoUrl?.let { url ->
+        // Toggle Account section
+        optionAccount.setOnClickListener {
+            accountOptionsContainer.isVisible = !accountOptionsContainer.isVisible
+        }
+
+        // Log Out
+        optionLogout.setOnClickListener {
+            auth.signOut()
+            findNavController().navigate(R.id.action_global_loginActivity)
+        }
+
+        // Toggle Language
+        optionLanguage.setOnClickListener {
+            languageOptionsContainer.isVisible = !languageOptionsContainer.isVisible
+        }
+
+        optionEnglish.setOnClickListener {
+        }
+
+        optionIndonesia.setOnClickListener {
+        }
+    }
+
+    private fun loadUserData() {
+        val displayName = sharedViewModel.displayName.value
+        val photoUri = sharedViewModel.photoUri.value
+
+        if (displayName != null && photoUri != null) {
+            binding.tvProfileName.text = displayName
+            Glide.with(this)
+                .load(photoUri)
+                .placeholder(R.drawable.ic_person)
+                .circleCrop()
+                .into(binding.ivProfileImage)
+        } else {
+            auth.currentUser?.let { user ->
+                binding.tvProfileName.text = user.displayName ?: "User Name"
+                binding.tvProfileEmail.text = user.email ?: "user.email@example.com"
+
                 Glide.with(this)
-                    .load(url)
-                    .placeholder(R.drawable.ic_profile)
+                    .load(user.photoUrl)
+                    .placeholder(R.drawable.ic_person)
+                    .circleCrop()
                     .into(binding.ivProfileImage)
             }
         }
     }
 
-    // 4. MODIFY CLICK LISTENERS TO USE THE INTERFACE
-    // Instead of navigating, the buttons now call the listener methods.
-    private fun setupClickListeners() {
-        binding.optionProfileEdit.setOnClickListener {
-            listener?.onProfileEditSelected()
-            dismiss() // Close the dialog after an option is selected
+
+    private fun observeViewModel() = with(sharedViewModel) {
+        displayName.observe(viewLifecycleOwner) { name ->
+            binding.tvProfileName.text = name
         }
 
-        binding.optionAccount.setOnClickListener {
-            listener?.onAccountSelected()
-            dismiss() // Close the dialog
-        }
-
-        binding.optionLanguage.setOnClickListener {
-            listener?.onLanguagesSelected()
-            dismiss()
+        photoUri.observe(viewLifecycleOwner) { uri ->
+            Glide.with(this@ProfileOptionsFragment)
+                .load(uri)
+                .placeholder(R.drawable.ic_person)
+                .circleCrop()
+                .into(binding.ivProfileImage)
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-
-    companion object {
-        const val TAG = "ProfileOptionsFragment"
     }
 }

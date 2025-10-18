@@ -31,8 +31,11 @@ class FullAnalysisFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 🔹 Tombol Back
-        val btnBack = view.findViewById<ImageView>(R.id.btnBack)
+        // 🔹 Dapatkan referensi ke layout yang di-include
+        val headerView = view.findViewById<View>(R.id.header)
+
+        // 🔹 Cari tombol "btnBack" dari layout yang di-include
+        val btnBack = headerView.findViewById<ImageView>(R.id.btnBack)
         btnBack.setOnClickListener {
             // Gunakan Navigation Component untuk kembali ke fragment sebelumnya
             findNavController().popBackStack()

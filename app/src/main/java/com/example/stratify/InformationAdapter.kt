@@ -18,14 +18,19 @@ class InformationAdapter(
 
     private var isDeleteModeActive: Boolean = false
 
-    // Fungsi ini akan dipanggil dari Fragment untuk mengubah mode
     fun setDeleteMode(isActive: Boolean) {
         isDeleteModeActive = isActive
-        notifyDataSetChanged()
+        notifyDataSetChanged() // Redraw the entire list to reflect the mode change.
     }
 
+    /**
+     * ViewHolder for the information items.
+     */
     inner class InformationViewHolder(val binding: ItemInformationBinding) : RecyclerView.ViewHolder(binding.root)
 
+    /**
+     * Creates a new ViewHolder by inflating the item layout.
+     */
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): InformationViewHolder {
         val binding = ItemInformationBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return InformationViewHolder(binding)
@@ -36,34 +41,34 @@ class InformationAdapter(
         holder.binding.tvInfoDetails.text = item.details
         holder.binding.etInfoDetails.setText(item.details)
 
+        // Toggle visibility between TextView and EditText based on the editing state.
         holder.binding.tvInfoDetails.isVisible = !item.isEditing
         holder.binding.etInfoDetails.isVisible = item.isEditing
 
-        // LOGIKA UTAMA ADA DI SINI
         if (isDeleteModeActive) {
-            // --- JIKA MODE DELETE AKTIF ---
+            // --- UI logic for Delete Mode ---
             holder.binding.tvSavedLabel.visibility = View.GONE
             holder.binding.tvInfoDate.visibility = View.GONE
 
-            // Tampilkan ikon X jika item ini terpilih untuk dihapus
+            // Change the icon to indicate whether the item is selected for deletion.
             if (item.isSelectedForDeletion) {
                 holder.binding.ivActionIcon.setImageResource(R.drawable.ic_close_circle)
             } else {
-                // Jika tidak terpilih, tampilkan ikon save/unsave seperti biasa
+                // Use a different icon for items that are not yet selected for deletion.
                 if (item.isSaved) {
                     holder.binding.ivActionIcon.setImageResource(R.drawable.ic_check_circle)
                 } else {
                     holder.binding.ivActionIcon.setImageResource(R.drawable.ic_radio_button_unchecked)
                 }
             }
-            // Klik pada ikon akan men-toggle status pilihan
+            // The click listener toggles the selection state for deletion.
             holder.binding.ivActionIcon.setOnClickListener {
                 item.isSelectedForDeletion = !item.isSelectedForDeletion
                 notifyItemChanged(position)
             }
 
         } else {
-            // --- JIKA MODE DELETE TIDAK AKTIF (NORMAL) ---
+            // --- UI logic for Normal Mode ---
             if (item.isSaved) {
                 holder.binding.ivActionIcon.setImageResource(R.drawable.ic_check_circle)
                 holder.binding.tvSavedLabel.visibility = View.VISIBLE
@@ -78,19 +83,22 @@ class InformationAdapter(
                 holder.binding.tvInfoDate.visibility = View.GONE
             }
 
+            // If the item is in editing mode, give focus to the EditText.
             if (item.isEditing) {
                 holder.binding.etInfoDetails.requestFocus()
                 holder.binding.ivActionIcon.setImageResource(R.drawable.ic_check_circle)
             }
 
+            // In normal mode, the action icon click is handled by the onActionClick callback.
             holder.binding.ivActionIcon.setOnClickListener {
                 onActionClick(item, position)
             }
         }
 
-        // Listener untuk EditText tetap sama
+        // Listener for the "Done" action on the soft keyboard.
         holder.binding.etInfoDetails.setOnEditorActionListener { textView, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
+                // When "Done" is pressed, trigger the text change callback.
                 onTextChange(item, textView.text.toString())
                 return@setOnEditorActionListener true
             }
@@ -98,6 +106,9 @@ class InformationAdapter(
         }
     }
 
+    /**
+     * Returns the total number of items in the list.
+     */
     override fun getItemCount(): Int {
         return items.size
     }

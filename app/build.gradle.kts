@@ -85,6 +85,8 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
 
     implementation(libs.philjay.mpandroidchart)
+    implementation("androidx.slice:slice-builders:1.0.0")
+
 }
 
 // This is a harmless comment to trigger a project rebuild and clear the cache.

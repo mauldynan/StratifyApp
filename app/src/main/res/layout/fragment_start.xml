@@ -6,19 +6,9 @@
     android:layout_height="match_parent"
     tools:context=".StartFragment">
 
-    <ImageButton
-        android:id="@+id/btn_back_to_list"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/ic_arrow_back"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:visibility="gone"
-        tools:visibility="visible"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:contentDescription="Kembali ke daftar"/>
+    <include
+        android:id="@+id/header"
+        layout="@layout/header_workspace" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_create"

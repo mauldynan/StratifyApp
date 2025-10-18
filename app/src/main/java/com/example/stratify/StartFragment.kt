@@ -12,12 +12,17 @@ import com.example.stratify.databinding.FragmentStartBinding
 
 class StartFragment : Fragment() {
 
+    // View binding for the fragment's layout.
     private var _binding: FragmentStartBinding? = null
+    // This property is only valid between onCreateView and onDestroyView.
     private val binding get() = _binding!!
 
-    // Menerima argumen dari Navigasi
+    // Retrieves navigation arguments passed to this fragment.
     private val args: StartFragmentArgs by navArgs()
 
+    /**
+     * Inflates the layout for this fragment.
+     */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -26,24 +31,34 @@ class StartFragment : Fragment() {
         return binding.root
     }
 
+    /**
+     * Sets up the views and click listeners after the view has been created.
+     */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Tampilkan tombol back jika argumennya true
-        binding.btnBackToList.isVisible = args.showBackButton
-        binding.btnBackToList.setOnClickListener {
-            findNavController().navigateUp()
+        // Conditionally show the back button based on the navigation argument.
+        if (args.showBackButton) {    // Use the CORRECT ID: btnBack
+            binding.header.btnBack.isVisible = true
+            binding.header.btnBack.setOnClickListener {
+                findNavController().navigateUp() // Navigate back to the previous screen.
+            }
         }
 
+        // Set a click listener for the "Create Workspace" button.
         binding.btnCreate.setOnClickListener {
             findNavController().navigate(R.id.action_startFragment_to_createWorkspaceFragment)
         }
 
+        // Set a click listener for the "Join Workspace" button.
         binding.btnJoin.setOnClickListener {
             findNavController().navigate(R.id.action_startFragment_to_joinWorkspaceFragment)
         }
     }
 
+    /**
+     * Cleans up the binding when the view is destroyed to prevent memory leaks.
+     */
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

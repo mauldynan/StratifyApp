@@ -3,34 +3,16 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android.background="@color/white">
 
-    <!-- 🔸 Sort & Search -->
-    <LinearLayout
+    <include
+        android:id="@+id/header"
+        layout="@layout/header_scrum"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:padding="8dp"
-        android:background="#FFE4B3">
-
-        <Spinner
-            android:id="@+id/spinnerSort"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:backgroundTint="@color/orange"
-            android:layout_marginEnd="6dp" />
-
-        <SearchView
-            android:id="@+id/searchView"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:background="@drawable/search_bg"
-            android:queryHint="Search"
-            android:iconifiedByDefault="false"
-            android:layout_marginStart="6dp"/>
-    </LinearLayout>
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- 🔸 TabLayout untuk status -->
     <com.google.android.material.tabs.TabLayout
@@ -40,15 +22,12 @@
         android:background="@android:color/white"
         app:tabMode="scrollable"
         app:tabGravity="fill"
-        app:tabIndicatorHeight="4dp"
-        app:tabIndicatorColor="@android:color/transparent"
-        app:tabIndicatorFullWidth="false"
+        app:tabIndicatorHeight="0dp"
+        app:tabBackground="@drawable/tab_background"
         app:tabSelectedTextColor="@color/white"
-        app:tabTextColor="@color/white"
+        app:tabTextColor="@color/maroon_primary"
         app:tabRippleColor="@android:color/transparent"
         android:elevation="4dp"/>
-
-
 
     <!-- 🔸 RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
@@ -66,6 +45,7 @@
         android:layout_gravity="center_horizontal"
         android:layout_margin="16dp"
         android:backgroundTint="@color/redw"
+        app:borderWidth="0dp"
         android:src="@drawable/ic_add" />
 
 

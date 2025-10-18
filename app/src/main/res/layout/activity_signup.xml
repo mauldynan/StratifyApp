@@ -70,6 +70,17 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/logo_full" />
 
+            <TextView
+                android:id="@+id/text_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Let's create your account!"
+                android:textColor="@color/text_grey"
+                android:layout_marginTop="2dp"
+                android:layout_marginStart="32dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/text_signup" />
+
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/email_input_layout"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -79,10 +90,10 @@
                 android:layout_marginEnd="32dp"
                 android:layout_marginTop="32dp"
                 app:boxBackgroundColor="@color/white"
-                app:boxCornerRadiusTopStart="24dp"
-                app:boxCornerRadiusTopEnd="24dp"
-                app:boxCornerRadiusBottomStart="24dp"
-                app:boxCornerRadiusBottomEnd="24dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/text_signup">
@@ -105,10 +116,10 @@
                 android:layout_marginTop="16dp"
                 app:boxBackgroundColor="@color/white"
                 app:endIconMode="password_toggle"
-                app:boxCornerRadiusTopStart="24dp"
-                app:boxCornerRadiusTopEnd="24dp"
-                app:boxCornerRadiusBottomStart="24dp"
-                app:boxCornerRadiusBottomEnd="24dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
                 app:layout_constraintEnd_toEndOf="@+id/email_input_layout"
                 app:layout_constraintStart_toStartOf="@+id/email_input_layout"
                 app:layout_constraintTop_toBottomOf="@+id/email_input_layout">
@@ -146,10 +157,10 @@
                 android:layout_marginTop="16dp"
                 app:boxBackgroundColor="@color/white"
                 app:endIconMode="password_toggle"
-                app:boxCornerRadiusTopStart="24dp"
-                app:boxCornerRadiusTopEnd="24dp"
-                app:boxCornerRadiusBottomStart="24dp"
-                app:boxCornerRadiusBottomEnd="24dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
                 app:layout_constraintEnd_toEndOf="@+id/password_input_layout"
                 app:layout_constraintStart_toStartOf="@+id/password_input_layout"
                 app:layout_constraintTop_toBottomOf="@+id/password_validation_text">
@@ -183,7 +194,7 @@
                 android:id="@+id/signup_button"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="32dp"
                 android:text="@string/signup_button_text"
                 android:paddingVertical="12dp"
                 android:backgroundTint="@color/button_yellow"

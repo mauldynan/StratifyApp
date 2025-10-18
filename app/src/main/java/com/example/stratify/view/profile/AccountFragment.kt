@@ -40,10 +40,6 @@ class AccountFragment : Fragment() {
             showLogoutConfirmationDialog()
         }
 
-        binding.btnDeleteAccount.setOnClickListener {
-            // Navigate to the delete account confirmation page
-            findNavController().navigate(R.id.action_accountFragment_to_accountDeleteFragment)
-        }
     }
 
     private fun showLogoutConfirmationDialog() {
