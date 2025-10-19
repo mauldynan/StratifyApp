@@ -4,6 +4,8 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.stratify.databinding.ItemProgressBinding
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class ProgressAdapter(
     private var progressList: List<ProgressItem>,
@@ -51,7 +53,17 @@ class ProgressAdapter(
          */
         fun bind(progressItem: ProgressItem) {
             binding.tvProgressText.text = progressItem.text
-            binding.tvProgressDate.text = progressItem.date
+
+            // Format tanggal dari timestamp
+            val timestamp = progressItem.createdAt
+            if (timestamp != null) {
+                val formatter = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+                binding.tvProgressDate.text = formatter.format(timestamp)
+            } else {
+                // Tampilkan placeholder jika timestamp belum ada
+                binding.tvProgressDate.text = "Sending..."
+            }
+
             binding.btnDeleteProgress.setOnClickListener {
                 onDeleteClick(progressItem)
             }

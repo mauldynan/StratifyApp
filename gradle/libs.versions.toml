@@ -4,28 +4,33 @@
 # Versi untuk plugin
 # Note: agp version was 8.10.1, but androidApplication plugin was 8.4.1. Aligning to what the plugin uses.
 agp = "8.12.3"
-kotlin = "1.9.23"
-googleGmsGoogleServices = "4.4.1"
-navigation = "2.7.7" # Kept the newer version
+kotlin = "2.2.20"
+googleGmsGoogleServices = "4.4.4"
+navigation = "2.9.5" # Kept the newer version
+
 
 # Versi untuk library
-coreKtx = "1.13.1"
+coreKtx = "1.17.0"
 junit = "4.13.2"
-junitVersion = "1.1.5"
-espressoCore = "3.5.1"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
 appcompat = "1.7.1" # Chose 1.7.1 from your initial list, but 1.6.1 was also present. Adjust if needed.
-material = "1.12.0"
-activity = "1.9.0"
-constraintlayout = "2.1.4"
+material = "1.13.0"
+activity = "1.11.0"
+constraintlayout = "2.2.1"
 lifecycle = "2.9.4"
 recyclerview = "1.4.0"
 glide = "5.0.5"
 
-firebaseAuth = "22.3.1"
-firebaseStorage = "21.0.0"
-credentials = "1.3.0-alpha02"
-googleid = "1.1.0"
+firebaseAuth = "24.0.1"
+firebaseStorage = "21.0.2"
+credentials = "1.5.0"
+googleid = "1.1.1"
 mpandroidchart = "v3.1.0"
+firebaseAuthVersion = "24.0.1"
+firebaseStorageKtx = "21.0.2"
+firebaseBom = "34.4.0"
+firebaseFirestoreKtx = "25.1.4"
 
 # Note: These version keys from your original file seem to have been replaced by the plugin aliases below.
 # androidApplication = "8.4.1" # This is now referenced via agp
@@ -42,8 +47,8 @@ androidx-credentials-play-services-auth = { group = "androidx.credentials", name
 androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 # Firebase & Google
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
 # ADD THIS LINE for Firebase Storage
+#noinspection SimilarGradleDependency
 firebase-storage = { group = "com.google.firebase", name = "firebase-storage-ktx", version.ref = "firebaseStorage" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
 
@@ -60,6 +65,16 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 philjay-mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpandroidchart" }
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
+#noinspection SimilarGradleDependency
+google-firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuthVersion" }
+
+# Firebase & Google (bersih)
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx", version.ref = "firebaseFirestoreKtx" }
+#noinspection SimilarGradleDependency
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
+#noinspection SimilarGradleDependency
+firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage-ktx", version.ref = "firebaseStorageKtx" }
 
 
 [plugins]
