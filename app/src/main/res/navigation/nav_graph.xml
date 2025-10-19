@@ -5,20 +5,17 @@
     android:id="@+id/nav_graph"
     app:startDestination="@id/navigation_home">
 
-    <!-- 🔐 Login Activity -->
     <activity
         android:id="@+id/loginActivity"
         android:name="com.example.stratify.LoginActivity"
         tools:layout="@layout/activity_login" />
 
-    <!-- 🌍 Global Action -->
     <action
         android:id="@+id/action_global_loginActivity"
         app:destination="@id/loginActivity"
         app:popUpTo="@id/nav_graph"
         app:popUpToInclusive="true" />
 
-    <!-- 🏠 Home / Dashboard -->
     <fragment
         android:id="@+id/navigation_home"
         android:name="com.example.stratify.FragmentDashboard"
@@ -34,32 +31,27 @@
             app:destination="@id/profileOptionsFragment" />
     </fragment>
 
-    <!-- 👤 Profile Options (Dialog) -->
     <dialog
         android:id="@+id/profileOptionsFragment"
         android:name="com.example.stratify.view.user.ProfileOptionsFragment"
         android:label="Profile Options"
         tools:layout="@layout/fragment_profile_options">
 
-        <!-- ✏️ Navigate to Edit Profile -->
         <action
             android:id="@+id/action_profileOptionsFragment_to_profileEditFragment"
             app:destination="@id/profileEditFragment" />
 
-        <!-- ⚙️ Navigate to Account -->
         <action
             android:id="@+id/action_profileOptionsFragment_to_accountFragment"
             app:destination="@id/accountFragment" />
     </dialog>
 
-    <!-- 📊 Full Analysis -->
     <fragment
         android:id="@+id/fullAnalysisFragment"
         android:name="com.example.stratify.FullAnalysisFragment"
         android:label="Full Analysis"
         tools:layout="@layout/fragment_full_analysis" />
 
-    <!-- 🧩 Workspace -->
     <fragment
         android:id="@+id/navigation_workspace"
         android:name="com.example.stratify.StartFragment"
@@ -137,28 +129,24 @@
             app:argType="com.example.stratify.Workspace" />
     </fragment>
 
-    <!-- ✏️ Profile Edit -->
     <fragment
         android:id="@+id/profileEditFragment"
         android:name="com.example.stratify.ProfileEditFragment"
         android:label="Edit Profile"
         tools:layout="@layout/fragment_profile_edit" />
 
-    <!-- ⚙️ Account -->
     <fragment
         android:id="@+id/accountFragment"
         android:name="com.example.stratify.view.profile.AccountFragment"
         android:label="Account"
         tools:layout="@layout/fragment_account" />
 
-    <!-- 🌐 Languages -->
     <fragment
         android:id="@+id/languagesFragment"
         android:name="com.example.stratify.LanguagesFragment"
         android:label="Languages"
         tools:layout="@layout/fragment_languages" />
 
-    <!-- 💬 Scrum -->
     <fragment
         android:id="@+id/navigation_scrum"
         android:name="com.example.scrum_section.ScrumFragment"

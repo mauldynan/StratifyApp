@@ -1,26 +1,33 @@
 package com.example.stratify
 
-import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.stratify.databinding.FragmentWorkspaceListBinding
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.example.stratify.view.profile.SharedViewModel
+import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.launch
 
 class WorkspaceListFragment : Fragment() {
 
     private var _binding: FragmentWorkspaceListBinding? = null
     private val binding get() = _binding!!
 
+    private val repository = WorkspaceRepository()
     private val workspaceList = mutableListOf<Workspace>()
     private lateinit var workspaceAdapter: WorkspaceAdapter
+    private var workspaceListener: ListenerRegistration? = null
+
+    private val sharedViewModel: SharedViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -33,26 +40,21 @@ class WorkspaceListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        loadWorkspaces()
+        setupRecyclerView()
+        setupRealTimeListener()
 
-        // Setup Adapter
-        workspaceAdapter = WorkspaceAdapter(workspaceList, {
-            // On item click
-            val action = WorkspaceListFragmentDirections.actionWorkspaceListFragmentToWorkspaceDetailFragment(it)
-            findNavController().navigate(action)
-        }, {
-            // On delete click
-            showDeleteConfirmationDialog(it)
-        })
-
-        // Setup RecyclerView
-        binding.rvWorkspaces.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = workspaceAdapter
+        sharedViewModel.photoUri.observe(viewLifecycleOwner) {
+            workspaceAdapter.refreshProfilePhotos()
         }
 
-        // Listener to receive data from Create/Join and Detail fragments
-        parentFragmentManager.setFragmentResultListener("workspace_update_request", viewLifecycleOwner) { _, bundle ->
+        sharedViewModel.displayName.observe(viewLifecycleOwner) {
+            workspaceAdapter.refreshProfilePhotos()
+        }
+
+        parentFragmentManager.setFragmentResultListener(
+            "workspace_update_request",
+            viewLifecycleOwner
+        ) { _, bundle ->
             val updatedWorkspace = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 bundle.getParcelable("updated_workspace", Workspace::class.java)
             } else {
@@ -69,14 +71,51 @@ class WorkspaceListFragment : Fragment() {
                     workspaceList.add(ws)
                     workspaceAdapter.notifyItemInserted(workspaceList.size - 1)
                 }
-                saveWorkspaces()
             }
         }
 
         binding.btnAddWorkspace.setOnClickListener {
-            val action = WorkspaceListFragmentDirections.actionWorkspaceListFragmentToStartFragment(showBackButton = true)
+            val action = WorkspaceListFragmentDirections.actionWorkspaceListFragmentToStartFragment(
+                showBackButton = true
+            )
             findNavController().navigate(action)
         }
+    }
+
+    private fun setupRecyclerView() {
+        workspaceAdapter = WorkspaceAdapter(
+            items = workspaceList,
+            onItemClick = { workspace ->
+                val action = WorkspaceListFragmentDirections
+                    .actionWorkspaceListFragmentToWorkspaceDetailFragment(workspace)
+                findNavController().navigate(action)
+            },
+            onDeleteClick = { workspace ->
+                showDeleteConfirmationDialog(workspace)
+            }
+        )
+
+        binding.rvWorkspaces.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = workspaceAdapter
+        }
+    }
+
+    private fun setupRealTimeListener() {
+        workspaceListener = repository.listenToUserWorkspaces(
+            onWorkspacesChanged = { workspaces ->
+                workspaceList.clear()
+                workspaceList.addAll(workspaces)
+                workspaceAdapter.notifyDataSetChanged()
+            },
+            onError = { error ->
+                Toast.makeText(
+                    requireContext(),
+                    "Error: ${error.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        )
     }
 
     private fun showDeleteConfirmationDialog(workspace: Workspace) {
@@ -84,40 +123,35 @@ class WorkspaceListFragment : Fragment() {
             .setTitle("Delete Workspace")
             .setMessage("Are you sure you want to delete this workspace?")
             .setPositiveButton("Yes") { _, _ ->
-                val index = workspaceList.indexOf(workspace)
-                if (index != -1) {
-                    workspaceList.removeAt(index)
-                    saveWorkspaces()
-                    workspaceAdapter.notifyItemRemoved(index)
-                }
+                deleteWorkspace(workspace)
             }
             .setNegativeButton("No", null)
             .show()
     }
 
-    private fun saveWorkspaces() {
-        val sharedPrefs = requireActivity().getSharedPreferences("workspace_prefs", Context.MODE_PRIVATE)
-        val editor = sharedPrefs.edit()
-        val gson = Gson()
-        val json = gson.toJson(workspaceList)
-        editor.putString("workspaces", json)
-        editor.apply()
-    }
+    private fun deleteWorkspace(workspace: Workspace) {
+        lifecycleScope.launch {
+            val result = repository.deleteWorkspace(workspace.id)
 
-    private fun loadWorkspaces() {
-        val sharedPrefs = requireActivity().getSharedPreferences("workspace_prefs", Context.MODE_PRIVATE)
-        val gson = Gson()
-        val json = sharedPrefs.getString("workspaces", null)
-        val type = object : TypeToken<MutableList<Workspace>>() {}.type
-        if (json != null) {
-            val workspaces: MutableList<Workspace> = gson.fromJson(json, type)
-            workspaceList.clear()
-            workspaceList.addAll(workspaces)
+            result.onSuccess {
+                Toast.makeText(
+                    requireContext(),
+                    "Workspace deleted successfully",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }.onFailure { error ->
+                Toast.makeText(
+                    requireContext(),
+                    "Error: ${error.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        workspaceListener?.remove()
         _binding = null
     }
 }

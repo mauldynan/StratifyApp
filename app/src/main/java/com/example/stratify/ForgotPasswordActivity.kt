@@ -1,17 +1,13 @@
 package com.example.stratify
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.text.TextUtils
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
-import android.widget.ProgressBar
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
 
 class ForgotPasswordActivity : AppCompatActivity() {
 
@@ -30,7 +26,7 @@ class ForgotPasswordActivity : AppCompatActivity() {
         sendToEmailButton = findViewById(R.id.send_to_email_button)
         emailEditText = findViewById(R.id.email_input_edit_text)
 
-        mAuth = Firebase.auth
+        mAuth = FirebaseAuth.getInstance()
 
         // Reset Button Listener
         sendToEmailButton.setOnClickListener {

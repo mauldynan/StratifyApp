@@ -1,0 +1,74 @@
+<resources>
+    <string name="app_name">Stratify</string>
+
+    <string name="content_desc_back_button">Kembali</string>
+    <string name="label_department">Departemen</string>
+
+    <string name="label_details">Deskripsi Tugas</string>
+    <string name="status_todo">Belum Dikerjakan</string>
+    <string name="button_done">Selesai</string>
+    <string name="title_information">Informasi</string>
+    <string name="delete_underlined"><u>Hapus</u></string>
+    <string name="button_add">+</string>
+    <string name="cancel_underlined"><u>Batal</u></string>
+
+    <string-array name="status_options">
+        <item>Belum Dikerjakan</item>
+        <item>Sedang Dikerjakan</item>
+        <item>Perlu Diverifikasi</item>
+        <item>Selesai</item>
+    </string-array>
+
+    <string name="login_title">Selamat datang kembali</string>
+    <string name="login_desc">Silakan masukkan detail Anda untuk masuk.</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Kata Sandi</string>
+    <string name="forgot_password">Lupa Kata Sandi</string>
+    <string name="login_button_text">Masuk</string>
+    <string name="or_login_with">Atau masuk dengan</string>
+    <string name="google_button">Masuk dengan Google</string>
+
+    <string name="no_account">Belum punya akun?</string>
+    <string name="have_account">Sudah punya akun?</string>
+    <string name="sign_up_link">DAFTAR</string>
+    <string name="sign_in_link">MASUK</string>
+
+    <string name="signup_title">Daftar</string>
+    <string name="signup_button_text">Daftar</string>
+    <string name="hint_confirm_password">Konfirmasi Kata Sandi</string>
+
+    <string name="app_logo">Logo Stratify</string>
+    <string name="google_login">Ikon Login Google</string>
+    <string name="facebook_login">Ikon Login Facebook</string>
+    <string name="apple_login">Ikon Login Apple</string>
+    <string name="top_background_element">Elemen desain latar belakang atas</string>
+    <string name="bottom_background_element">Elemen desain latar belakang bawah</string>
+
+    <string name="password_requirements">Kata sandi minimal 8 karakter, mengandung huruf kecil, huruf besar, angka, dan simbol.</string>
+    <string name="passwords_do_not_match">Kata sandi tidak cocok.</string>
+
+    <string name="error_empty_fields">Email dan kata sandi tidak boleh kosong.</string>
+    <string name="login_success">Login Berhasil!</string>
+    <string name="login_failed">Login Gagal: </string>
+
+    <string name="acc">Ikon akun pengguna</string>
+    <string name="profile_picture">Foto profil</string>
+
+    <string name="title_home">Beranda</string>
+    <string name="title_scrum">Scrum</string>
+    <string name="title_workspace">Workspace</string>
+
+    <string name="app_name_analysis">Analisis Aplikasi</string>
+    <string name="title_analysis_apps">Analisis Aplikasi</string>
+    <string name="hint_search">Cari</string>
+
+    <string name="label_monitored_app">Aplikasi yang dipantau</string>
+    <string name="label_recently_viewed">Aplikasi yang baru dilihat</string>
+    <string name="label_recommendation_apps">Rekomendasi Aplikasi</string>
+
+    <string name="app_name_shopee">Shopee</string>
+    <string name="shopee_rating_location">4.6/5 Bintan</string>
+    <string name="shopee_percentages">70%   20%</string>
+    <string name="button_view_full_analysis">Lihat Analisis Lengkap</string>
+    <string name="add_task">Tambah Tugas</string>
+</resources>

@@ -3,9 +3,16 @@ package com.example.stratify
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.stratify.databinding.ItemMemberBinding
+import com.google.firebase.auth.FirebaseAuth
 
-class MemberAdapter(private val members: List<Member>) : RecyclerView.Adapter<MemberAdapter.MemberViewHolder>() {
+class MemberAdapter(
+    private val members: List<Member>,
+    private val memberPhotos: Map<String, String> = emptyMap()
+) : RecyclerView.Adapter<MemberAdapter.MemberViewHolder>() {
+
+    private val auth = FirebaseAuth.getInstance()
 
     inner class MemberViewHolder(val binding: ItemMemberBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -14,14 +21,30 @@ class MemberAdapter(private val members: List<Member>) : RecyclerView.Adapter<Me
         return MemberViewHolder(binding)
     }
 
-    /**
-     * Binds the data from a [Member] object to the views in the ViewHolder.
-     */
     override fun onBindViewHolder(holder: MemberViewHolder, position: Int) {
         val member = members[position]
+        val currentUser = auth.currentUser
+
         val memberName = if (member.isYou) "${member.name} (You)" else member.name
         holder.binding.tvMemberName.text = memberName
-        holder.binding.ivMemberProfile.setImageResource(R.drawable.ic_profile_placeholder)
+
+        // --- AWAL PERBAIKAN BUG 2 ---
+        val photoUrlToLoad: String? = if (member.isYou && currentUser != null) {
+            // Jika itu user yang login, pakai foto terbaru
+            currentUser.photoUrl?.toString()
+        } else {
+            // Jika itu member lain, cari fotonya di map pakai ID member tsb
+            // (Saya asumsikan data class Member punya 'userId')
+            memberPhotos[member.userId]
+        }
+
+        Glide.with(holder.itemView.context)
+            .load(photoUrlToLoad)
+            .placeholder(R.drawable.ic_profile_placeholder)
+            .circleCrop()
+            .into(holder.binding.ivMemberProfile)
+
+        // --- AKHIR PERBAIKAN BUG 2 ---
     }
 
     override fun getItemCount(): Int = members.size

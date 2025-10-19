@@ -107,7 +107,7 @@ class SignupActivity : AppCompatActivity() {
                 } else {
                     // If invalid, show a red message with the requirements.
                     binding.passwordValidationText.setTextColor(Color.RED)
-                    binding.passwordValidationText.text = "Password must be at least 8 characters long, and contain a lowercase letter, an uppercase letter, a number and a symbol."
+                    binding.passwordValidationText.text = "Password must be at least 8 characters long, contain a lowercase, uppercase, number, and symbol (@, $, !, %, *, ?, & only)."
                 }
             }
         })

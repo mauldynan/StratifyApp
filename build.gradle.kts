@@ -5,4 +5,3 @@ plugins {
     alias(libs.plugins.google.gms.google.services) apply false
     alias(libs.plugins.androidX.navigation.safeargs.kotlin) apply false
 }
-

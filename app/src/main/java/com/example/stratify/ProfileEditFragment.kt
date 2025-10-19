@@ -2,6 +2,7 @@ package com.example.stratify
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -9,74 +10,43 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.navigation.fragment.findNavController
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.stratify.databinding.FragmentProfileEditBinding
 import com.example.stratify.view.profile.SharedViewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
+import com.squareup.picasso.Picasso
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
-
 
 class ProfileEditFragment : Fragment() {
 
-    // View binding for the fragment's layout.
     private var _binding: FragmentProfileEditBinding? = null
     private val binding get() = _binding!!
-    private lateinit var auth: FirebaseAuth
-    // URI of the image selected by the user (from gallery or camera).
-    private var selectedImageUri: Uri? = null
-    // URI for the image captured by the camera.
+
+    private val firebaseAuth = FirebaseAuth.getInstance()
+    private var imageUri: Uri? = null
     private var cameraImageUri: Uri? = null
 
-    // Shared ViewModel to hold and share user profile data across fragments.
     private val sharedViewModel: SharedViewModel by activityViewModels()
 
-    // Activity Result Launcher for handling results from other activities,
-    // like the camera or gallery image pickers.
-    private val activityResultLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                // Get the URI from the gallery intent or use the camera URI.
-                val galleryUri = result.data?.data
-                selectedImageUri = galleryUri ?: cameraImageUri
+    private val CLOUD_NAME = "dipoxvy4b"
+    private val UPLOAD_PRESET = "android_upload_cloudinary"
+    private val PICK_IMAGE = 1001
+    private val TAKE_PHOTO = 1002
 
-                // Load the selected image into the ImageView.
-                selectedImageUri?.let {
-                    Glide.with(this)
-                        .load(it)
-                        .diskCacheStrategy(DiskCacheStrategy.NONE)
-                        .skipMemoryCache(true)
-                        .circleCrop()
-                        .into(binding.ivProfileImageEdit)
-                }
-            }
-        }
-
-    // Activity Result Launcher for requesting camera permission.
-    private val requestCameraPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                // If permission is granted, launch the camera.
-                launchCamera()
-            } else {
-                // Otherwise, inform the user that permission is required.
-                Toast.makeText(
-                    requireContext(),
-                    "Camera permission is required to take photos.",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-
-    /**
-     * Inflates the layout for this fragment.
-     */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -85,184 +55,232 @@ class ProfileEditFragment : Fragment() {
         return binding.root
     }
 
-    /**
-     * Initializes views, observers, and click listeners after the view has been created.
-     */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        auth = FirebaseAuth.getInstance()
 
-        loadUserData()
-        observeViewModel()
-        setupClickListeners()
-    }
-
-    /**
-     * Observes the SharedViewModel for changes in user data (name and photo URI)
-     * and updates the UI accordingly.
-     */
-    private fun observeViewModel() {
-        sharedViewModel.displayName.observe(viewLifecycleOwner) { name ->
-            binding.etName.setText(name)
-        }
-        sharedViewModel.photoUri.observe(viewLifecycleOwner) { uri ->
-            Glide.with(this)
-                .load(uri)
-                .diskCacheStrategy(DiskCacheStrategy.NONE)
-                .skipMemoryCache(true)
-                .circleCrop()
-                .into(binding.ivProfileImageEdit)
-        }
-    }
-
-    /**
-     * Loads the initial user data from the SharedViewModel or Firebase Auth
-     * and populates the UI fields.
-     */
-    private fun loadUserData() {
-        val user = auth.currentUser ?: return
-
-        // Populate ViewModel from Firebase if it's empty.
-        if (sharedViewModel.displayName.value == null && user.displayName != null) {
-            sharedViewModel.displayName.value = user.displayName
-        }
-        if (sharedViewModel.photoUri.value == null && user.photoUrl != null) {
-            sharedViewModel.photoUri.value = user.photoUrl
+        val user = firebaseAuth.currentUser
+        user?.let {
+            binding.etName.setText(it.displayName ?: "")
+            it.photoUrl?.let { uri -> Picasso.get().load(uri).into(binding.ivProfileImageEdit) }
         }
 
-        // Get initial data from ViewModel, falling back to Firebase user data.
-        val initialName = sharedViewModel.displayName.value ?: user.displayName
-        val initialPhotoUri = sharedViewModel.photoUri.value ?: user.photoUrl
+        binding.ivProfileImageEdit.setOnClickListener {
+            showImagePickerDialog()
+        }
 
-        binding.etName.setText(initialName)
+        binding.btnSaveChanges.setOnClickListener {
+            val newName = binding.etName.text.toString().trim()
+            if (newName.isEmpty()) {
+                Toast.makeText(requireContext(), "Nama tidak boleh kosong", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
-        // Set a placeholder drawable for the profile image.
-        val placeholderResId = resources.getIdentifier("ic_person", "drawable", requireContext().packageName)
-
-        Glide.with(this)
-            .load(initialPhotoUri)
-            .placeholder(placeholderResId.takeIf { it != 0 } ?: R.drawable.ic_person)
-            .circleCrop()
-            .into(binding.ivProfileImageEdit)
-
-        // Set the initial selected image URI.
-        selectedImageUri = initialPhotoUri
+            if (imageUri != null) {
+                uploadImageToCloudinary(imageUri!!, newName)
+            } else {
+                updateFirebaseProfile(newName, null)
+            }
+        }
     }
 
-    /**
-     * Sets up click listeners for the back button, edit photo icon, and save changes button.
-     */
-    private fun setupClickListeners() = with(binding) {
-        ivBack.setOnClickListener { findNavController().navigateUp() }
-        ivEditPhotoIcon.setOnClickListener { showPhotoOptionsDialog() }
-        btnSaveChanges.setOnClickListener { saveChanges() }
-    }
+    private fun showImagePickerDialog() {
+        val hasCamera = requireContext().packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
 
-    /**
-     * Displays a dialog with options to either take a new photo or choose one from the gallery.
-     */
-    private fun showPhotoOptionsDialog() {
-        val options = arrayOf("Take Photo", "Choose from Gallery")
+        val options = if (hasCamera) {
+            arrayOf("Ambil Foto", "Pilih dari Galeri")
+        } else {
+            arrayOf("Pilih dari Galeri")
+        }
+
         AlertDialog.Builder(requireContext())
-            .setTitle("Select Photo")
+            .setTitle("Pilih Foto Profil")
             .setItems(options) { _, which ->
-                when (which) {
-                    0 -> requestCameraPermissionLauncher.launch(android.Manifest.permission.CAMERA) // Request camera permission
-                    1 -> launchGallery() // Launch the gallery picker
+                if (hasCamera) {
+                    when (which) {
+                        0 -> openCamera()
+                        1 -> openGallery()
+                    }
+                } else {
+                    openGallery()
                 }
             }
+            .setNegativeButton("Batal", null)
             .show()
     }
 
-    /**
-     * Launches an intent to pick an image from the device's external storage (gallery).
-     */
-    private fun launchGallery() {
-        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-        activityResultLauncher.launch(intent)
-    }
+    private fun openCamera() {
+        try {
+            val photoFile = File(requireContext().cacheDir, "camera_photo_${System.currentTimeMillis()}.jpg")
 
-    /**
-     * Launches the device's camera app to take a new photo.
-     * The captured image is saved to a temporary file.
-     */
-    private fun launchCamera() {
-        val timeStamp = System.currentTimeMillis()
-        val photoFile = File(requireContext().externalCacheDir, "IMG_$timeStamp.jpg")
-        // Create a content URI for the temporary file using FileProvider.
-        cameraImageUri = FileProvider.getUriForFile(
-            requireContext(),
-            "${requireContext().packageName}.provider",
-            photoFile
-        )
-        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-            putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
-        }
-        activityResultLauncher.launch(intent)
-    }
+            cameraImageUri = FileProvider.getUriForFile(
+                requireContext(),
+                "${requireContext().packageName}.provider",
+                photoFile
+            )
 
-    /**
-     * Persists the selected image URI to the app's internal storage.
-     * This is crucial because URIs from the gallery or camera might be temporary.
-     * @param sourceUri The temporary URI of the selected image.
-     * @return A new, permanent URI for the image saved in the app's local storage, or null if saving fails.
-     */
-    private fun persistImageUri(sourceUri: Uri): Uri? {
-        val timeStamp = System.currentTimeMillis()
-        val destinationFile = File(requireContext().filesDir, "profile_pic_$timeStamp.jpg")
-
-        return try {
-            // Copy the image from the source URI to the destination file.
-            requireContext().contentResolver.openInputStream(sourceUri)?.use { inputStream ->
-                destinationFile.outputStream().use { outputStream ->
-                    inputStream.copyTo(outputStream)
-                }
+            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             }
-            // Return the URI of the newly created local file.
-            Uri.fromFile(destinationFile)
+
+            if (intent.resolveActivity(requireContext().packageManager) != null) {
+                startActivityForResult(intent, TAKE_PHOTO)
+            } else {
+                Toast.makeText(requireContext(), "Tidak ada aplikasi kamera", Toast.LENGTH_SHORT).show()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(context, "Failed to save image locally.", Toast.LENGTH_SHORT).show()
-            null
+            Toast.makeText(requireContext(), "Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
     }
 
-    /**
-     * Saves the edited name and profile picture to the SharedViewModel.
-     * It also persists the image locally if a new one was selected.
-     */
-    private fun saveChanges() {
-        val name = binding.etName.text.toString().trim()
-        // Validate that the name is not empty.
-        if (name.isEmpty()) {
-            binding.tilName.error = "Name cannot be empty"
-            return
-        }
+    private fun openGallery() {
+        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        startActivityForResult(intent, PICK_IMAGE)
+    }
 
-        binding.tilName.error = null // Clear any previous errors.
-        sharedViewModel.displayName.value = name // Update the name in the ViewModel.
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
 
-        selectedImageUri?.let { uri ->
-            // Check if the URI is a local file or content URI that needs to be persisted.
-            if (uri.scheme == "content" || uri.scheme == "file" || uri.scheme == null) {
-                val persistedUri = persistImageUri(uri)
-                persistedUri?.let {
-                    // Update the photo URI in the ViewModel with the permanent URI.
-                    sharedViewModel.photoUri.value = it
+        when (requestCode) {
+            PICK_IMAGE -> {
+                if (resultCode == Activity.RESULT_OK) {
+                    data?.data?.let { uri ->
+                        showLoading(true, "Memuat gambar...")
+                        loadImageAsync(uri)
+                    }
                 }
-            } else {
-                // If it's a remote URL (e.g., from Firebase), use it directly.
-                sharedViewModel.photoUri.value = uri
+            }
+            TAKE_PHOTO -> {
+                if (resultCode == Activity.RESULT_OK) {
+                    cameraImageUri?.let { uri ->
+                        showLoading(true, "Memuat foto...")
+                        loadImageAsync(uri)
+                    }
+                }
             }
         }
-
-        Toast.makeText(context, "Changes updated locally", Toast.LENGTH_SHORT).show()
-        findNavController().navigateUp() // Navigate back to the previous screen.
     }
 
-    /**
-     * Cleans up the binding when the view is destroyed to prevent memory leaks.
-     */
+    private fun loadImageAsync(uri: Uri) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Simulasi loading (opsional)
+                delay(300)
+
+                withContext(Dispatchers.Main) {
+                    imageUri = uri
+                    binding.ivProfileImageEdit.setImageURI(uri)
+                    showLoading(false)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    showLoading(false)
+                    Toast.makeText(requireContext(), "Gagal memuat gambar", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun showLoading(isLoading: Boolean, message: String = "Uploading...") {
+        binding.btnSaveChanges.isEnabled = !isLoading
+        binding.btnSaveChanges.text = if (isLoading) message else "Save Changes"
+        binding.ivProfileImageEdit.isEnabled = !isLoading
+
+        // Tampilkan/sembunyikan ProgressBar
+        binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+    }
+
+    private fun uploadImageToCloudinary(uri: Uri, name: String) {
+        val context = requireContext()
+
+        // Tampilkan loading
+        showLoading(true, "Uploading...")
+
+        val file = File(getRealPathFromURI(uri))
+        val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("file", file.name, requestBody)
+            .addFormDataPart("upload_preset", UPLOAD_PRESET)
+            .build()
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val client = OkHttpClient()
+                val request = Request.Builder()
+                    .url("https://api.cloudinary.com/v1_1/$CLOUD_NAME/image/upload")
+                    .post(body)
+                    .build()
+
+                val response = client.newCall(request).execute()
+                val responseData = response.body?.string()
+                val imageUrl = Regex("\"secure_url\":\"(.*?)\"")
+                    .find(responseData ?: "")?.groupValues?.get(1)?.replace("\\/", "/")
+
+                withContext(Dispatchers.Main) {
+                    showLoading(false)
+
+                    if (imageUrl != null) {
+                        updateFirebaseProfile(name, imageUrl)
+                    } else {
+                        Toast.makeText(context, "Gagal upload ke Cloudinary", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    showLoading(false)
+                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun updateFirebaseProfile(name: String, photoUrl: String?) {
+        val user = firebaseAuth.currentUser ?: return
+
+        val profileUpdates = UserProfileChangeRequest.Builder()
+            .setDisplayName(name)
+            .apply {
+                if (photoUrl != null) setPhotoUri(Uri.parse(photoUrl))
+            }.build()
+
+        user.updateProfile(profileUpdates).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                sharedViewModel.displayName.value = name
+                if (photoUrl != null) {
+                    sharedViewModel.photoUri.value = Uri.parse(photoUrl)
+                }
+
+                parentFragmentManager.setFragmentResult(
+                    "profile_updated",
+                    Bundle().apply {
+                        putString("name", name)
+                        putString("photoUrl", photoUrl)
+                    }
+                )
+
+                Toast.makeText(requireContext(), "Profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                requireActivity().onBackPressedDispatcher.onBackPressed()
+            } else {
+                Toast.makeText(requireContext(), "Gagal memperbarui profil", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun getRealPathFromURI(uri: Uri): String {
+        val context = requireContext()
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val tempFile = File.createTempFile("upload_", ".jpg", context.cacheDir)
+        inputStream?.use { input ->
+            tempFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        return tempFile.absolutePath
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

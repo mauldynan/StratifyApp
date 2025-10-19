@@ -60,9 +60,15 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.storage)
+
+
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
+    implementation(libs.google.firebase.auth)
+    implementation(libs.firebase.storage.ktx)
+    implementation(libs.firebase.bom)
+    implementation(libs.firebase.firestore.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -74,19 +80,16 @@ dependencies {
     implementation(libs.androidx.recyclerview)
     implementation(libs.glide)
 
-    // Dependensi untuk testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-    //foto bulat
     implementation("de.hdodenhof:circleimageview:3.1.0")
-
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.13.2")
+    implementation("com.squareup.picasso:picasso:2.71828")
+    implementation("com.squareup.okhttp3:okhttp:5.2.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     implementation(libs.philjay.mpandroidchart)
     implementation("androidx.slice:slice-builders:1.0.0")
-
 }
-
-// This is a harmless comment to trigger a project rebuild and clear the cache.
