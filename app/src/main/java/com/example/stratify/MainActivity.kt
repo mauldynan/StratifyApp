@@ -1,7 +1,10 @@
 package com.example.stratify
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -11,19 +14,26 @@ import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.edit
 import androidx.core.view.GravityCompat
-import androidx.lifecycle.lifecycleScope // <-- Tetap perlukan ini
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.bumptech.glide.Glide
+import com.example.scrum_section.worker.DailySummaryWorker
 import com.example.stratify.databinding.ActivityMainBinding
 import com.example.stratify.view.profile.SharedViewModel
 import com.google.firebase.auth.FirebaseAuth
 import java.util.Locale
-import androidx.core.content.edit
-import kotlinx.coroutines.launch // <-- Tetap perlukan ini
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -32,10 +42,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfiguration: AppBarConfiguration
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
 
-    // Kita tetap butuh repository untuk setupBottomNavigation
     private val repository = WorkspaceRepository()
 
     private val sharedViewModel: SharedViewModel by viewModels()
+    private val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
 
     override fun attachBaseContext(newBase: Context) {
         val prefs = newBase.getSharedPreferences("Settings", Context.MODE_PRIVATE)
@@ -55,6 +65,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Menambahkan logika dari MainActivity sebelumnya
+        checkNotificationPermission()
+        scheduleDailySummaryWorker()
 
         auth.currentUser?.let { user ->
             user.reload().addOnCompleteListener { task ->
@@ -179,19 +193,15 @@ class MainActivity : AppCompatActivity() {
                 else -> View.VISIBLE
             }
         }
-        // --- PERBAIKAN PANGGILAN FUNGSI BAHASA ---
         optionEnglish?.setOnClickListener {
-            // Cukup panggil setLocale, recreate() sudah ada di dalamnya
             setLocale("en")
             binding.drawerLayout.closeDrawer(GravityCompat.END)
         }
 
         optionIndonesia?.setOnClickListener {
-            // Cukup panggil setLocale, recreate() sudah ada di dalamnya
             setLocale("in")
             binding.drawerLayout.closeDrawer(GravityCompat.END)
         }
-        // --- AKHIR PERBAIKAN ---
     }
 
     private fun setupBottomNavigation() {
@@ -242,8 +252,6 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton("No", null)
             .show()
     }
-
-    // --- PERBAIKAN FUNGSI setLocale ---
     private fun setLocale(languageCode: String) {
         // 1. Simpan pilihan bahasa ke SharedPreferences
         val prefs = getSharedPreferences("Settings", Context.MODE_PRIVATE)
@@ -253,18 +261,62 @@ class MainActivity : AppCompatActivity() {
 
         // 2. Update locale aplikasi saat ini
         val locale = Locale(languageCode)
-        Locale.setDefault(locale) // Set default locale JVM
+        Locale.setDefault(locale)
         val config = resources.configuration
-        config.setLocale(locale) // Set locale untuk resources
+        config.setLocale(locale)
         // Update konfigurasi resources Activity
         resources.updateConfiguration(config, resources.displayMetrics)
 
         // 3. Restart Activity
         recreate()
     }
-    // --- AKHIR PERBAIKAN ---
+    // File: MainActivity.kt
 
-    // Fungsi onEnglishSelected dan onIndonesianSelected tidak diperlukan lagi
-    // karena pemanggilannya sudah langsung memanggil setLocale di setupDrawer
+    private fun scheduleDailySummaryWorker() {
+        // =================================================================
+        // !! GUNAKAN KODE INI HANYA UNTUK TESTING !!
+        // =================================================================
+        Log.d("WorkManagerTest", "Menjadwalkan OneTimeWorkRequest untuk pengujian dalam 10 detik.")
 
-} // Akhir dari class MainActivity
+        val testRequest = OneTimeWorkRequestBuilder<DailySummaryWorker>()
+            .setInitialDelay(5, TimeUnit.SECONDS)
+            .build()
+
+        // Gunakan enqueue() biasa untuk tugas satu kali
+        WorkManager.getInstance(this).enqueue(testRequest)
+
+        // =================================================================
+        // KODE ASLI
+        // =================================================================
+        /*
+        // KODE ASLI (Periodic)
+        val dailySummaryRequest =
+            PeriodicWorkRequestBuilder<DailySummaryWorker>(24, TimeUnit.HOURS) // Interval minimum
+                .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            DailySummaryWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            dailySummaryRequest
+        )
+        */
+    }
+
+
+    private fun checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST_CODE
+                )
+            }
+        }
+    }
+
+}

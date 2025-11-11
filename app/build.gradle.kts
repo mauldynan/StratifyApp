@@ -92,4 +92,5 @@ dependencies {
 
     implementation(libs.philjay.mpandroidchart)
     implementation("androidx.slice:slice-builders:1.0.0")
+    implementation("androidx.work:work-runtime-ktx:2.11.0")
 }
