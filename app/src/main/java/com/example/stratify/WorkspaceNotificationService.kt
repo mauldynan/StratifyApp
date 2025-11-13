@@ -45,19 +45,15 @@ class WorkspaceNotificationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val workspaceId = intent?.getStringExtra(EXTRA_WORKSPACE_ID) ?: return START_NOT_STICKY
 
-        // Start foreground service dengan notifikasi persistent
         val notification = createForegroundNotification("Monitoring workspace updates...")
         startForeground(notificationId, notification)
 
-        // Listen perubahan workspace
         listenToWorkspaceChanges(workspaceId)
 
         return START_STICKY
     }
 
     private fun listenToWorkspaceChanges(workspaceId: String) {
-        val currentUserId = auth.currentUser?.uid ?: return
-
         listener = db.collection("workspaces")
             .document(workspaceId)
             .addSnapshotListener { snapshot, error ->
@@ -65,12 +61,9 @@ class WorkspaceNotificationService : Service() {
 
                 val workspace = snapshot?.toObject(Workspace::class.java) ?: return@addSnapshotListener
 
-                // Cek apakah ada perubahan status (lo bisa custom kondisinya)
-                // Misalnya lo bisa simpen "lastStatus" buat compare
                 val lastStatus = getLastKnownStatus(workspaceId)
 
                 if (lastStatus != null && lastStatus != workspace.status) {
-                    // Status berubah! Kirim notifikasi
                     showStatusUpdateNotification(
                         workspaceName = workspace.name,
                         newStatus = workspace.status,
@@ -78,7 +71,6 @@ class WorkspaceNotificationService : Service() {
                     )
                 }
 
-                // Simpan status terbaru
                 saveLastKnownStatus(workspaceId, workspace.status)
             }
     }
@@ -125,7 +117,9 @@ class WorkspaceNotificationService : Service() {
             .setContentTitle("Stratify")
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_workspace_status_notification)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setOngoing(true)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
             .build()
     }
 
@@ -134,16 +128,16 @@ class WorkspaceNotificationService : Service() {
             val channel = NotificationChannel(
                 channelId,
                 "Workspace Updates",
-                NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Notifications for workspace status changes"
+                setShowBadge(false)
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
     }
 
-    // Helper function buat simpen & ambil last status (pake SharedPreferences)
     private fun getLastKnownStatus(workspaceId: String): String? {
         val prefs = getSharedPreferences("workspace_prefs", Context.MODE_PRIVATE)
         return prefs.getString("status_$workspaceId", null)

@@ -65,6 +65,7 @@ class WorkspaceDetailFragment : Fragment() {
 
         // Request notification permission
         requestNotificationPermission()
+        WorkspaceNotificationService.start(requireContext(), args.workspace.id)
         setupWorkspaceListener()
         setupProgressListener()
         setupInlineEditor()
@@ -86,8 +87,6 @@ class WorkspaceDetailFragment : Fragment() {
                 )
                 membersDialog.show(childFragmentManager, "MembersDialog")
             }
-            // Start notification service
-            WorkspaceNotificationService.start(requireContext(), args.workspace.id)
         }
 
     }
@@ -103,6 +102,7 @@ class WorkspaceDetailFragment : Fragment() {
             }
         }
     }
+
 
     private fun setupWorkspaceListener() {
         val workspaceId = args.workspace.id
