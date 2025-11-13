@@ -6,6 +6,9 @@ import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -13,6 +16,7 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -48,9 +52,20 @@ class WorkspaceDetailFragment : Fragment() {
         return binding.root
     }
 
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Toast.makeText(context, "Notification permission granted", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Request notification permission
+        requestNotificationPermission()
+        WorkspaceNotificationService.start(requireContext(), args.workspace.id)
         setupWorkspaceListener()
         setupProgressListener()
         setupInlineEditor()
@@ -62,8 +77,7 @@ class WorkspaceDetailFragment : Fragment() {
             findNavController().navigateUp()
         }
 
-        // --- AWAL PERBAIKAN ---
-        // Memperbaiki cara memanggil dialog dengan 3 parameter
+
         binding.chipMembers.setOnClickListener {
             currentWorkspace?.let { workspace ->
                 val membersDialog = MembersDialogFragment.newInstance(
@@ -74,8 +88,21 @@ class WorkspaceDetailFragment : Fragment() {
                 membersDialog.show(childFragmentManager, "MembersDialog")
             }
         }
-        // --- AKHIR PERBAIKAN ---
+
     }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
 
     private fun setupWorkspaceListener() {
         val workspaceId = args.workspace.id
@@ -379,6 +406,9 @@ class WorkspaceDetailFragment : Fragment() {
         super.onDestroyView()
         workspaceListener?.remove()
         progressListener?.remove()  // Remove progress listener
+
+        // Stop service ketika keluar dari detail workspace
+        WorkspaceNotificationService.stop(requireContext())
         _binding = null
     }
 }

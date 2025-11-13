@@ -6,7 +6,7 @@ import androidx.recyclerview.widget.RecyclerView
 
 class StatusAdapter(
     private val statusList: List<String>,
-    private val onItemClick: (String) -> Unit // Add this parameter
+    private val onItemClick: (String) -> Unit
 ) : RecyclerView.Adapter<StatusAdapter.StatusViewHolder>() {
 
     inner class StatusViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
