@@ -5,22 +5,38 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.view.isVisible
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
-import com.bumptech.glide.Glide
-import com.example.stratify.databinding.FragmentProfileOptionsBinding
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
 import com.example.stratify.view.profile.SharedViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 class ProfileOptionsFragment : Fragment() {
 
-    private var _binding: FragmentProfileOptionsBinding? = null
-    private val binding get() = _binding!!
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
-
-    // SharedViewModel yang sama dengan MainActivity & MainWorkspace
     private val sharedViewModel: SharedViewModel by activityViewModels()
 
     override fun onCreateView(
@@ -28,109 +44,113 @@ class ProfileOptionsFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?,
     ): View {
-        _binding = FragmentProfileOptionsBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        setupClickListeners()
-        loadUserData()
-        observeViewModel()
-        listenForProfileUpdate()
-
-        Log.d("DBG_PROFILE", "ProfileOptionsFragment onViewCreated")
-    }
-
-    private fun setupClickListeners() = with(binding) {
-        optionProfileEdit.setOnClickListener {
-            findNavController().navigate(R.id.profileEditFragment)
-        }
-
-        optionAccount.setOnClickListener {
-            accountOptionsContainer.isVisible = !accountOptionsContainer.isVisible
-        }
-
-        optionLogout.setOnClickListener {
-            auth.signOut()
-            findNavController().navigate(R.id.action_global_loginActivity)
-        }
-
-        optionLanguage.setOnClickListener {
-            languageOptionsContainer.isVisible = !languageOptionsContainer.isVisible
-        }
-
-        optionEnglish.setOnClickListener {
-            // TODO: implement language change
-        }
-
-        optionIndonesia.setOnClickListener {
-            // TODO: implement language change
+        return ComposeView(requireContext()).apply {
+            setContent {
+                MaterialTheme {
+                    ProfileOptionsScreen(
+                        sharedViewModel = sharedViewModel,
+                        onEditProfileClicked = {
+                            findNavController().navigate(R.id.profileEditFragment)
+                        },
+                        onLogoutClicked = {
+                            auth.signOut()
+                            findNavController().navigate(R.id.action_global_loginActivity)
+                        }
+                    )
+                }
+            }
         }
     }
+}
 
-    private fun loadUserData() {
-        val user = auth.currentUser
-        Log.d("DBG_PROFILE", "loadUserData: ${user?.displayName}, ${user?.photoUrl}")
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun ProfileOptionsScreen(
+    sharedViewModel: SharedViewModel,
+    onEditProfileClicked: () -> Unit,
+    onLogoutClicked: () -> Unit
+) {
+    val user = FirebaseAuth.getInstance().currentUser
+    val displayName by sharedViewModel.displayName.observeAsState(user?.displayName ?: "User Name")
+    val photoUri by sharedViewModel.photoUri.observeAsState(user?.photoUrl)
+    val email = user?.email ?: "user.email@example.com"
 
-        binding.tvProfileEmail.text = user?.email ?: "user.email@example.com"
+    var accountOptionsVisible by remember { mutableStateOf(false) }
+    var languageOptionsVisible by remember { mutableStateOf(false) }
 
-        // Prefer dari ViewModel, fallback ke Firebase
-        binding.tvProfileName.text = sharedViewModel.displayName.value
-            ?: user?.displayName
-                    ?: "User Name"
-
-        val photoUri = sharedViewModel.photoUri.value ?: user?.photoUrl
-
-        Glide.with(this)
-            .load(photoUri)
-            .placeholder(R.drawable.ic_person)
-            .circleCrop()
-            .into(binding.ivProfileImage)
-    }
-
-    private fun observeViewModel() {
-        // Observe perubahan dari SharedViewModel
-        sharedViewModel.displayName.observe(viewLifecycleOwner) { name ->
-            Log.d("DBG_PROFILE", "ViewModel displayName changed: $name")
-            binding.tvProfileName.text = name ?: auth.currentUser?.displayName ?: "User Name"
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(16.dp)
+    ) {
+        // Profile Header
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            GlideImage(
+                model = photoUri,
+                contentDescription = "Profile Image",
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            ) {
+                it.placeholder(R.drawable.ic_person)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(text = displayName, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text(text = email, color = Color.Gray)
+            }
         }
 
-        sharedViewModel.photoUri.observe(viewLifecycleOwner) { uri ->
-            Log.d("DBG_PROFILE", "ViewModel photoUri changed: $uri")
-            Glide.with(this)
-                .load(uri)
-                .placeholder(R.drawable.ic_person)
-                .circleCrop()
-                .into(binding.ivProfileImage)
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Options
+        ProfileOptionItem("Edit Profile", onEditProfileClicked)
+        ProfileOptionItem(
+            "Account",
+            onClick = { accountOptionsVisible = !accountOptionsVisible },
+            showDropdown = true
+        )
+        if (accountOptionsVisible) {
+            Column(modifier = Modifier.padding(start = 16.dp)) {
+                ProfileOptionItem("Logout", onLogoutClicked)
+            }
+        }
+
+        ProfileOptionItem(
+            "Language",
+            onClick = { languageOptionsVisible = !languageOptionsVisible },
+            showDropdown = true
+        )
+        if (languageOptionsVisible) {
+            Column(modifier = Modifier.padding(start = 16.dp)) {
+                ProfileOptionItem("English") { /* TODO */ }
+                ProfileOptionItem("Indonesia") { /* TODO */ }
+            }
         }
     }
+}
 
-    private fun listenForProfileUpdate() {
-        // Backup listener kalau ViewModel belum keupdate
-        parentFragmentManager.setFragmentResultListener(
-            "profile_updated",
-            viewLifecycleOwner
-        ) { _, bundle ->
-            val name = bundle.getString("name")
-            val photoUrl = bundle.getString("photoUrl")
-            Log.d("DBG_PROFILE", "Received fragment result: name=$name, photoUrl=$photoUrl")
-
-            // Fragment result akan trigger update ViewModel juga di ProfileEditFragment
-            // Jadi observer ViewModel di atas yang akan handle update UI
+@Composable
+fun ProfileOptionItem(
+    text: String,
+    onClick: () -> Unit,
+    showDropdown: Boolean = false
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        if (showDropdown) {
+            Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // Hanya reload kalau data masih default
-        if (binding.tvProfileName.text == "User Name") {
-            loadUserData()
-        }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }

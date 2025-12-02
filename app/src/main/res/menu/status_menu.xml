@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@+id/status_todo" android:title="TODO" />
-    <item android:id="@+id/status_in_progress" android:title="IN_PROGRESS" />
-    <item android:id="@+id/status_to_verify" android:title="TO_VERIFY" />
-    <item android:id="@+id/status_done" android:title="DONE" />
-</menu>

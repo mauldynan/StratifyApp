@@ -1,54 +1,92 @@
 package com.example.scrum_section
 
-import android.app.Dialog
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.Window
-import android.widget.TextView
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.fragment.app.DialogFragment
 import com.example.scrum_section.model.Task
-import com.example.stratify.R
 
 class TaskDetailDialog(private val task: Task) : DialogFragment() {
-    /**
-     * Creates and configures the dialog for displaying task details.
-     */
-    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val dialog = Dialog(requireContext())
 
-        // Remove the title bar from the dialog.
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setContentView(R.layout.dialog_task_detail)
-
-        val tvName = dialog.findViewById<TextView>(R.id.tvName)
-        val tvDeadline = dialog.findViewById<TextView>(R.id.tvDeadline)
-        val tvDepartment = dialog.findViewById<TextView>(R.id.tvDepartment)
-        val tvDescription = dialog.findViewById<TextView>(R.id.tvDescription)
-        val btnClose = dialog.findViewById<TextView>(R.id.btnClose)
-        val underlineView = dialog.findViewById<View>(R.id.underlineView)
-
-        tvName.text = task.name
-        tvDeadline.text = task.deadline
-        tvDepartment.text = task.department
-        tvDescription.text = task.description
-
-        // Adjust the width of the underline view to match the width of the task name.
-        tvName.post {
-            val params = underlineView.layoutParams
-            params.width = tvName.width
-            underlineView.layoutParams = params
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setContent {
+                TaskDetailDialog(task = task, onDismissRequest = { dismiss() })
+            }
         }
+    }
 
-        // Set an OnClickListener for the close button to dismiss the dialog.
-        btnClose.setOnClickListener { dismiss() }
-
-        dialog.window?.setLayout(
-            (resources.displayMetrics.widthPixels * 0.8).toInt(),
+    override fun onStart() {
+        super.onStart()
+        dialog?.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.85).toInt(),
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
+    }
+}
 
-        return dialog
+@Composable
+fun TaskDetailDialog(task: Task, onDismissRequest: () -> Unit) {
+    Dialog(onDismissRequest = onDismissRequest) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = task.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+                Divider(
+                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+
+                Text(text = "Deadline: ${task.deadline}", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "Department: ${task.department}", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "Description: ${task.description}", style = MaterialTheme.typography.bodyMedium)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                TextButton(
+                    onClick = onDismissRequest,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Close")
+                }
+            }
+        }
     }
 }

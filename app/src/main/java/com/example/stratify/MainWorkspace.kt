@@ -1,174 +1,124 @@
+
 package com.example.stratify
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
-import android.view.View
-import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.GravityCompat
-import androidx.drawerlayout.widget.DrawerLayout
-import androidx.navigation.fragment.NavHostFragment
-import com.bumptech.glide.Glide
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.stratify.data.Workspace
+import com.example.stratify.ui.theme.StratifyTheme
+import com.example.stratify.ui.workspace.CreateWorkspaceScreen
+import com.example.stratify.ui.workspace.JoinWorkspaceScreen
+import com.example.stratify.ui.workspace.StartScreen
+import com.example.stratify.ui.workspace.WorkspaceDetailScreen
+import com.example.stratify.ui.workspace.WorkspaceListScreen
+import com.example.stratify.ui.workspace.WorkspaceScreen
 import com.example.stratify.view.profile.SharedViewModel
-import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.launch
 
-class MainWorkspace : AppCompatActivity() {
+class MainWorkspace : ComponentActivity() {
 
-    private lateinit var drawerLayout: DrawerLayout
-    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
-
-    // SharedViewModel untuk profile
     private val sharedViewModel: SharedViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main_workspace)
 
-        drawerLayout = findViewById(R.id.drawer_layout)
+        val startDestination = getStartDestination(this)
 
-        // Setup navigation
-        setupNavigation()
-
-        // Setup header account icon
-        setupHeader()
-
-        // Setup drawer profile
-        setupDrawer()
-
-        // Load initial profile
-        loadInitialProfile()
+        setContent {
+            StratifyTheme {
+                WorkspaceApp(startDestination = startDestination, viewModel = sharedViewModel)
+            }
+        }
     }
 
-    private fun setupNavigation() {
-        // Access SharedPreferences to retrieve saved workspace data
-        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        val gson = Gson()
+    private fun getStartDestination(context: Context): String {
+        val prefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         val json = prefs.getString("workspace_list_json", null)
-        val type = object : TypeToken<List<Workspace>>() {}.type
-        val workspaceList: List<Workspace>? = gson.fromJson(json, type)
-
-        // Check if the workspace list is not null and not empty
-        val hasWorkspace = !workspaceList.isNullOrEmpty()
-
-        // Get the NavController from the NavHostFragment
-        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
-        val navController = navHostFragment.navController
-        val navGraph = navController.navInflater.inflate(R.navigation.nav_graph_workspace)
-
-        // Set the start destination based on whether a workspace exists
-        if (hasWorkspace) {
-            navGraph.setStartDestination(R.id.workspaceListFragment)
+        return if (!json.isNullOrEmpty()) {
+            val type = object : TypeToken<List<Workspace>>() {}.type
+            val workspaceList: List<Workspace> = Gson().fromJson(json, type)
+            if (workspaceList.isNotEmpty()) WorkspaceScreen.WorkspaceList.route else WorkspaceScreen.Start.route
         } else {
-            navGraph.setStartDestination(R.id.startFragment)
-        }
-
-        navController.graph = navGraph
-    }
-
-    private fun setupHeader() {
-        val headerAccountIcon = findViewById<ImageButton>(R.id.account_icon)
-
-        headerAccountIcon?.setOnClickListener {
-            drawerLayout.openDrawer(GravityCompat.END)
-        }
-
-        // Observe profile changes untuk header
-        sharedViewModel.photoUri.observe(this) { uri ->
-            Log.d("DBG_WORKSPACE", "Header photoUri changed: $uri")
-            headerAccountIcon?.let { icon ->
-                Glide.with(this)
-                    .load(uri)
-                    .placeholder(R.drawable.ic_acc)
-                    .circleCrop()
-                    .into(icon)
-            }
+            WorkspaceScreen.Start.route
         }
     }
+}
 
-    private fun setupDrawer() {
-        val navView = findViewById<com.google.android.material.navigation.NavigationView>(R.id.nav_view)
-        val drawerContent = navView?.getChildAt(0)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WorkspaceApp(startDestination: String, viewModel: SharedViewModel) {
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-        // Find views di drawer (sama kayak MainActivity)
-        val headerProfileImage = drawerContent?.findViewById<ImageView>(R.id.ivProfileImage)
-        val headerName = drawerContent?.findViewById<TextView>(R.id.tvProfileName)
-        val headerEmail = drawerContent?.findViewById<TextView>(R.id.tvProfileEmail)
+    // Observe the ViewModel states
+    val displayName = viewModel.displayName.observeAsState(initial = "")
+    val photoUri = viewModel.photoUri.observeAsState(initial = null)
 
-        val optionProfileEdit = drawerContent?.findViewById<TextView>(R.id.optionProfileEdit)
-        val optionAccount = drawerContent?.findViewById<TextView>(R.id.optionAccount)
-        val accountOptionsContainer = drawerContent?.findViewById<LinearLayout>(R.id.account_options_container)
-        val optionLogout = drawerContent?.findViewById<TextView>(R.id.optionLogout)
-
-        // Load initial dari Firebase
-        val currentUser = auth.currentUser
-        if (sharedViewModel.displayName.value == null && !currentUser?.displayName.isNullOrEmpty()) {
-            sharedViewModel.displayName.value = currentUser?.displayName
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            // Your Drawer Content Composable will go here
+            // For now, it is empty as per the migration scope.
         }
-        if (sharedViewModel.photoUri.value == null && currentUser?.photoUrl != null) {
-            sharedViewModel.photoUri.value = currentUser.photoUrl
-        }
-
-        headerEmail?.text = currentUser?.email ?: "user.email@example.com"
-
-        // Observe ViewModel changes
-        sharedViewModel.displayName.observe(this) { name ->
-            Log.d("DBG_WORKSPACE", "Drawer displayName changed: $name")
-            headerName?.text = name ?: auth.currentUser?.displayName ?: "User Name"
-        }
-
-        sharedViewModel.photoUri.observe(this) { uri ->
-            Log.d("DBG_WORKSPACE", "Drawer photoUri changed: $uri")
-            headerProfileImage?.let { img ->
-                Glide.with(this)
-                    .load(uri)
-                    .placeholder(R.drawable.ic_person)
-                    .circleCrop()
-                    .into(img)
-            }
-        }
-
-        // Click listeners
-        optionProfileEdit?.setOnClickListener {
-            // Navigate ke ProfileEditFragment kalau ada
-            drawerLayout.closeDrawer(GravityCompat.END)
-        }
-
-        optionAccount?.setOnClickListener {
-            val container = accountOptionsContainer ?: return@setOnClickListener
-            container.visibility = when (container.visibility) {
-                View.VISIBLE -> View.GONE
-                else -> View.VISIBLE
-            }
-        }
-
-        optionLogout?.setOnClickListener {
-            auth.signOut()
-            finish() // Close workspace activity
-        }
+    ) {
+        WorkspaceNavHost(startDestination = startDestination)
     }
+}
 
-    private fun loadInitialProfile() {
-        auth.currentUser?.let { user ->
-            user.reload().addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    Log.d("DBG_WORKSPACE", "User reloaded: ${user.displayName}, ${user.photoUrl}")
-                    if (sharedViewModel.displayName.value.isNullOrEmpty()) {
-                        sharedViewModel.displayName.value = user.displayName
+@Composable
+fun WorkspaceNavHost(startDestination: String) {
+    val navController = rememberNavController()
+
+    NavHost(navController = navController, startDestination = startDestination) {
+        composable(WorkspaceScreen.Start.route) {
+            StartScreen(
+                onNavigateToCreateWorkspace = { navController.navigate(WorkspaceScreen.CreateWorkspace.route) },
+                onNavigateToJoinWorkspace = { navController.navigate(WorkspaceScreen.JoinWorkspace.route) }
+            )
+        }
+        composable(WorkspaceScreen.CreateWorkspace.route) {
+            CreateWorkspaceScreen(
+                onWorkspaceCreated = {
+                    navController.navigate(WorkspaceScreen.WorkspaceList.route) {
+                        popUpTo(navController.graph.id) { inclusive = true }
                     }
-                    if (sharedViewModel.photoUri.value == null && user.photoUrl != null) {
-                        sharedViewModel.photoUri.value = user.photoUrl
-                    }
-                } else {
-                    Log.w("DBG_WORKSPACE", "User reload failed", task.exception)
                 }
-            }
+            )
+        }
+        composable(WorkspaceScreen.JoinWorkspace.route) {
+            JoinWorkspaceScreen(
+                onWorkspaceJoined = { navController.navigate(WorkspaceScreen.WorkspaceList.route) }
+            )
+        }
+        composable(WorkspaceScreen.WorkspaceList.route) {
+            WorkspaceListScreen(
+                onNavigateToStart = { navController.navigate(WorkspaceScreen.Start.route) },
+                onNavigateToWorkspaceDetail = { workspaceId ->
+                    navController.navigate(WorkspaceScreen.WorkspaceDetail.createRoute(workspaceId))
+                }
+            )
+        }
+        composable(
+            route = WorkspaceScreen.WorkspaceDetail.route,
+            arguments = WorkspaceScreen.WorkspaceDetail.navArguments
+        ) {
+            val workspaceId = it.arguments?.getString("workspaceId")
+            WorkspaceDetailScreen(workspaceId = workspaceId)
         }
     }
 }

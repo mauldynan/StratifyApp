@@ -3,8 +3,11 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.gms.google.services)
     id("kotlin-parcelize")
-    id("androidx.navigation.safeargs.kotlin")
+    alias(libs.plugins.androidx.compose.compiler)
 }
+
+
+// In C:/Users/abrah/Work_Projects/StratifyApp/app/build.gradle.kts
 
 android {
     namespace = "com.example.stratify"
@@ -29,9 +32,14 @@ android {
         }
     }
 
+    buildFeatures {
+        compose = true
+        viewBinding = true
+    }
+
     sourceSets{
         getByName("main"){
-            java.srcDirs("src/main/java", "src/scrum_section/java")
+            java.srcDirs("src/main/java")
         }
     }
 
@@ -45,52 +53,69 @@ android {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
-
-
-    buildFeatures {
-        viewBinding = true
-    }
 }
 
 dependencies {
+    // --- AndroidX & Google Core ---
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
-    implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
-    implementation(libs.firebase.auth)
-    implementation(libs.firebase.storage)
+    implementation(libs.androidx.recyclerview)
 
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
 
-    implementation(libs.androidx.credentials)
-    implementation(libs.androidx.credentials.play.services.auth)
-    implementation(libs.googleid)
-    implementation(libs.google.firebase.auth)
-    implementation(libs.firebase.storage.ktx)
-    implementation(libs.firebase.bom)
-    implementation(libs.firebase.firestore.ktx)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-
+    // --- Lifecycle & Navigation ---
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
 
-    implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.androidx.recyclerview)
+    // --- Firebase (using BOM) ---
+    // The BOM manages versions, so you don't need to specify them for individual modules
+    implementation(platform(libs.firebase.bom))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+
+    // --- Google Identity & Credentials ---
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+
+    // --- Jetpack Compose (using BOM) ---
+    // The BOM ensures compatible versions of Compose libraries
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.material3)
+    implementation("androidx.compose.material:material-icons-extended") // Keep version here as it is not in BOM
+    implementation("androidx.compose.runtime:runtime-livedata") // Keep version here
+
+    // --- 3rd Party Libraries ---
     implementation(libs.glide)
-
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-
+    implementation(libs.philjay.mpandroidchart)
     implementation("de.hdodenhof:circleimageview:3.1.0")
     implementation("com.google.code.gson:gson:2.13.2")
     implementation("com.squareup.picasso:picasso:2.71828")
     implementation("com.squareup.okhttp3:okhttp:5.2.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
-    implementation(libs.philjay.mpandroidchart)
+    // --- Other AndroidX Libraries ---
     implementation("androidx.slice:slice-builders:1.0.0")
     implementation("androidx.work:work-runtime-ktx:2.11.0")
+
+    // --- Testing ---
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
