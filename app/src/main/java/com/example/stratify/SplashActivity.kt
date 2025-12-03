@@ -1,5 +1,7 @@
 package com.example.stratify
 
+import com.example.stratify.MainActivity
+
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent

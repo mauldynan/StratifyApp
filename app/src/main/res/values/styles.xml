@@ -7,7 +7,7 @@
         <item name="colorSecondary">@color/teal_200</item>
     </style>
 
-    <!-- ✅ Tambahan style untuk tombol tab di Scrum -->
+    <!-- Tambahan style untuk tombol tab di Scrum -->
     <style name="TabButton">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
@@ -24,8 +24,13 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textColor">@android:color/white</item>
         <item name="android:layout_marginEnd">6dp</item>
-        <item name="android:paddingHorizontal">14dp</item>
-        <item name="android:paddingVertical">6dp</item>
+
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingBottom">6dp</item>
+
         <item name="android:textAllCaps">false</item>
         <item name="android:backgroundTint">@color/gray</item>
     </style>

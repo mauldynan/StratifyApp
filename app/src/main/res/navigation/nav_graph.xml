@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/loginActivity">
+
+    <activity
+        android:id="@+id/loginActivity"
+        android:name="com.example.stratify.LoginActivity" />
+
+    <action
+        android:id="@+id/action_global_loginActivity"
+        app:destination="@id/loginActivity"
+        app:popUpTo="@id/nav_graph"
+        app:popUpToInclusive="true" />
+
+</navigation>

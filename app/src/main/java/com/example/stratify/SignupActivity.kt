@@ -62,8 +62,7 @@ fun SignupScreen(
     var passwordValidationResult by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
     val passwordPattern = remember {
-        Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$")
-    }
+        Pattern.compile("""^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$""")    }
 
     // Real-time password validation
     LaunchedEffect(password) {

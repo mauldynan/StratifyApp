@@ -30,13 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * A Jetpack Compose composable that displays a donut chart with animated segments
- * and labels, similar to the original DonutChartView.
- *
- * @param modifier The modifier to be applied to the layout.
- * @param positivePercent The percentage of the chart representing the "positive" segment.
- * @param negativePercent The percentage of the chart representing the "negative" segment.
- * @param totalReviews The total number to display in the center of the chart.
+ * Komponen Donut Chart murni menggunakan Jetpack Compose.
  */
 @Composable
 fun DonutChart(
@@ -45,6 +39,7 @@ fun DonutChart(
     negativePercent: Float,
     totalReviews: Int
 ) {
+    // Animasi pergerakan chart saat muncul
     val animatedSweep = remember { Animatable(0f) }
 
     LaunchedEffect(positivePercent, negativePercent) {
@@ -55,18 +50,20 @@ fun DonutChart(
         )
     }
 
+    // Definisi Warna
     val positiveColor = Color(0xFF4CAF50)
     val negativeColor = Color(0xFFF44336)
     val backgroundColor = Color(0xFFE0E0E0)
-    val strokeWidth = 15.dp
+    val strokeWidth = 12.dp // Sedikit diperkecil biar rapi
 
     Row(
-        modifier = modifier.padding(16.dp),
+        modifier = modifier, // Menggunakan modifier dari parent (agar posisi fleksibel)
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
+        // --- BAGIAN LINGKARAN CHART ---
         Box(
-            modifier = Modifier.size(150.dp),
+            modifier = Modifier.size(90.dp), // Ukuran fixed disesuaikan dengan layout Card
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -74,6 +71,7 @@ fun DonutChart(
                 val diameter = size.minDimension - strokePx
                 val topLeft = Offset(strokePx / 2, strokePx / 2)
 
+                // 1. Gambar Background Abu-abu (Lingkaran Penuh)
                 drawArc(
                     color = backgroundColor,
                     startAngle = 0f,
@@ -84,14 +82,15 @@ fun DonutChart(
                     size = Size(diameter, diameter)
                 )
 
-
                 val totalPercent = (positivePercent + negativePercent).coerceAtMost(100f)
+                // Menghitung sudut berdasarkan persentase
                 val positiveAngle = 360f * (positivePercent / totalPercent)
                 val negativeAngle = 360f * (negativePercent / totalPercent)
 
+                // 2. Gambar Garis Hijau (Positif)
                 drawArc(
                     color = positiveColor,
-                    startAngle = -90f, // Start from the top
+                    startAngle = -90f, // Mulai dari jam 12
                     sweepAngle = positiveAngle * animatedSweep.value,
                     useCenter = false,
                     style = Stroke(width = strokePx, cap = StrokeCap.Round),
@@ -99,9 +98,10 @@ fun DonutChart(
                     size = Size(diameter, diameter)
                 )
 
+                // 3. Gambar Garis Merah (Negatif)
                 drawArc(
                     color = negativeColor,
-                    startAngle = -90f + positiveAngle,
+                    startAngle = -90f + positiveAngle, // Lanjut dari posisi hijau
                     sweepAngle = negativeAngle * animatedSweep.value,
                     useCenter = false,
                     style = Stroke(width = strokePx, cap = StrokeCap.Round),
@@ -110,35 +110,37 @@ fun DonutChart(
                 )
             }
 
+            // Teks Angka di Tengah Lingkaran
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = totalReviews.toString(),
-                    fontSize = 24.sp,
+                    fontSize = 14.sp, // Font size disesuaikan agar muat
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
                 Text(
-                    text = "Total Review",
-                    fontSize = 12.sp,
+                    text = "Reviews",
+                    fontSize = 8.sp,
                     color = Color.Gray
                 )
             }
         }
 
-        Spacer(modifier = Modifier.width(24.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
+        // --- BAGIAN LEGENDA (Teks Samping) ---
         Column {
             Text(
-                text = "${positivePercent.toInt()}% Positive",
+                text = "${positivePercent.toInt()}% Pos",
                 color = positiveColor,
-                fontSize = 18.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "${negativePercent.toInt()}% Negative",
+                text = "${negativePercent.toInt()}% Neg",
                 color = negativeColor,
-                fontSize = 18.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
         }

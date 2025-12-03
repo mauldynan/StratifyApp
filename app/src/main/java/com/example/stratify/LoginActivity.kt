@@ -1,11 +1,13 @@
 package com.example.stratify
 
+import com.example.stratify.MainActivity
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,7 +36,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.stratify.ForgotPasswordActivity
-import com.example.stratify.MainActivity
 import com.example.stratify.R
 import com.example.stratify.SignupActivity
 import com.google.firebase.auth.FirebaseAuth
@@ -124,24 +126,42 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            // Decorative ellipses from the original XML layout
-            Image(
-                painter = painterResource(id = R.drawable.ellipse),
-                contentDescription = null,
-                contentScale = ContentScale.FillBounds,
+            // Definisikan warna yang diambil dari ellipse.jpg kamu
+            val glowColor = Color(0xFFFFE57F) // Kuning lembut
+
+// --- LINGKARAN ATAS ---
+            Box(
                 modifier = Modifier
-                    .size(1000.dp)
+                    .size(600.dp) // Ukuran besar untuk efek "bleber"
                     .align(Alignment.TopEnd)
-                    .offset(x = 600.dp, y = (-600).dp)
+                    .offset(x = 200.dp, y = (-200).dp) // Posisi di pojok
+                    .background(
+                        // Ini yang bikin efek "Glow" memudar dari tengah ke luar
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(
+                                glowColor.copy(alpha = 0.5f), // Tengah: Kuning transparan
+                                Color.Transparent             // Pinggir: Hilang total
+                            ),
+                            radius = 1000f // Radius pendaran
+                        )
+                    )
             )
-            Image(
-                painter = painterResource(id = R.drawable.ellipse),
-                contentDescription = null,
-                contentScale = ContentScale.FillBounds,
+
+// --- LINGKARAN BAWAH ---
+            Box(
                 modifier = Modifier
-                    .size(1000.dp)
+                    .size(600.dp)
                     .align(Alignment.BottomStart)
-                    .offset(x = (-600).dp, y = 600.dp)
+                    .offset(x = (-200).dp, y = 200.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(
+                                glowColor.copy(alpha = 0.5f),
+                                Color.Transparent
+                            ),
+                            radius = 1000f
+                        )
+                    )
             )
 
             Column(
@@ -262,8 +282,9 @@ fun LoginScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
-                            painter = painterResource(id = R.drawable.ic_google_scaled),
-                            contentDescription = "Google Logo"
+                            painter = painterResource(id = R.drawable.google_icon),
+                            contentDescription = "Google Icon",
+                            modifier = androidx . compose . ui . Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text("Continue with Google", color = Color.Black)

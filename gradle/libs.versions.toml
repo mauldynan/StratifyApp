@@ -2,10 +2,10 @@
 # --- Plugins ---
 # Warning: AGP 8.9.1 is a Canary/Preview version. If you are on Stable Android Studio, use "8.7.2".
 agp = "8.8.1"
-kotlin = "2.0.21"
+kotlin = "2.1.0"
 glance = "1.1.1"
 # CRITICAL FIX: For Kotlin 2.0+, this MUST match the 'kotlin' version above.
-composeCompiler = "2.0.21"
+composeCompiler = "2.1.0"
 googleGmsGoogleServices = "4.4.4"
 
 # --- AndroidX & Google ---

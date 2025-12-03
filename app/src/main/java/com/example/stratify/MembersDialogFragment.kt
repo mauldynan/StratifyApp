@@ -117,12 +117,12 @@ fun MembersDialogContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.Space-Between,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = "Workspace Members", style = MaterialTheme.typography.titleLarge)
                 IconButton(onClick = onDismiss) {
-                    Icon(painter = painterResource(id = R.drawable.ic_close), contentDescription = "Close")
+                    Icon(painter = painterResource(id = R.drawable.ic_close_circle), contentDescription = "Close")
                 }
             }
 

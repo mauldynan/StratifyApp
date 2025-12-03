@@ -46,11 +46,21 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+
     }
 
     kotlin {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
+}
+
+// percobaan siapa tau bisa ygy
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin-stdlib")) {
+            useVersion("2.1.0") // Pastikan ini sama dengan versi di libs.versions.toml
         }
     }
 }
@@ -95,6 +105,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation("androidx.compose.material:material-icons-extended") // Keep version here as it is not in BOM
     implementation("androidx.compose.runtime:runtime-livedata") // Keep version here
+    implementation("com.github.bumptech.glide:compose:1.0.0-beta01")
 
     // --- 3rd Party Libraries ---
     implementation(libs.glide)
