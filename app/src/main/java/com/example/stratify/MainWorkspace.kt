@@ -1,27 +1,49 @@
-
 package com.example.stratify
 
 import android.content.Context
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
+import com.bumptech.glide.integration.compose.placeholder
 import com.example.stratify.data.Workspace
 import com.example.stratify.ui.theme.StratifyTheme
 import com.example.stratify.ui.workspace.CreateWorkspaceScreen
 import com.example.stratify.ui.workspace.JoinWorkspaceScreen
-import com.example.stratify.ui.workspace.StartScreen
 import com.example.stratify.ui.workspace.WorkspaceDetailScreen
 import com.example.stratify.ui.workspace.WorkspaceListScreen
 import com.example.stratify.ui.workspace.WorkspaceScreen
@@ -65,31 +87,93 @@ fun WorkspaceApp(startDestination: String, viewModel: SharedViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // Observe the ViewModel states
     val displayName = viewModel.displayName.observeAsState(initial = "")
     val photoUri = viewModel.photoUri.observeAsState(initial = null)
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            // Your Drawer Content Composable will go here
-            // For now, it is empty as per the migration scope.
+            ProfileDrawerContent(
+                displayName = displayName.value,
+                photoUri = photoUri.value,
+                onLogoutClick = {
+                    // TODO: Handle logout
+                }
+            )
         }
     ) {
-        WorkspaceNavHost(startDestination = startDestination)
+        WorkspaceNavHost(
+            startDestination = startDestination,
+            openDrawer = {
+                scope.launch { drawerState.open() }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun ProfileDrawerContent(displayName: String, photoUri: Uri?, onLogoutClick: () -> Unit) {
+    ModalDrawerSheet {
+        Column(
+            modifier = Modifier
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            GlideImage(
+                model = photoUri,
+                contentDescription = "User Avatar",
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape),
+                loading = placeholder {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = "Loading Avatar",
+                        modifier = Modifier.size(80.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                failure = placeholder {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = "Default Avatar",
+                        modifier = Modifier.size(80.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = displayName, style = MaterialTheme.typography.titleMedium)
+        }
+        Divider()
+        NavigationDrawerItem(
+            label = { Text("Logout") },
+            selected = false,
+            onClick = onLogoutClick
+        )
     }
 }
 
 @Composable
-fun WorkspaceNavHost(startDestination: String) {
+fun WorkspaceNavHost(startDestination: String, openDrawer: () -> Unit) {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable(WorkspaceScreen.Start.route) {
-            StartScreen(
-                onNavigateToCreateWorkspace = { navController.navigate(WorkspaceScreen.CreateWorkspace.route) },
-                onNavigateToJoinWorkspace = { navController.navigate(WorkspaceScreen.JoinWorkspace.route) }
-            )
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Button(onClick = { navController.navigate(WorkspaceScreen.CreateWorkspace.route) }) {
+                    Text("Create Workspace")
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { navController.navigate(WorkspaceScreen.JoinWorkspace.route) }) {
+                    Text("Join Workspace")
+                }
+            }
         }
         composable(WorkspaceScreen.CreateWorkspace.route) {
             CreateWorkspaceScreen(
@@ -97,12 +181,14 @@ fun WorkspaceNavHost(startDestination: String) {
                     navController.navigate(WorkspaceScreen.WorkspaceList.route) {
                         popUpTo(navController.graph.id) { inclusive = true }
                     }
-                }
+                },
+                onBackPressed = { navController.navigateUp() }
             )
         }
         composable(WorkspaceScreen.JoinWorkspace.route) {
             JoinWorkspaceScreen(
-                onWorkspaceJoined = { navController.navigate(WorkspaceScreen.WorkspaceList.route) }
+                onWorkspaceJoined = { navController.navigate(WorkspaceScreen.WorkspaceList.route) },
+                onBackPressed = { navController.navigateUp() }
             )
         }
         composable(WorkspaceScreen.WorkspaceList.route) {
@@ -110,7 +196,8 @@ fun WorkspaceNavHost(startDestination: String) {
                 onNavigateToStart = { navController.navigate(WorkspaceScreen.Start.route) },
                 onNavigateToWorkspaceDetail = { workspaceId ->
                     navController.navigate(WorkspaceScreen.WorkspaceDetail.createRoute(workspaceId))
-                }
+                },
+                onOpenDrawer = openDrawer
             )
         }
         composable(
@@ -118,7 +205,10 @@ fun WorkspaceNavHost(startDestination: String) {
             arguments = WorkspaceScreen.WorkspaceDetail.navArguments
         ) {
             val workspaceId = it.arguments?.getString("workspaceId")
-            WorkspaceDetailScreen(workspaceId = workspaceId)
+            WorkspaceDetailScreen(
+                workspaceId = workspaceId,
+                onBackPressed = { navController.navigateUp() }
+            )
         }
     }
 }
