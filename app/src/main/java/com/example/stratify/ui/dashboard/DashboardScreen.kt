@@ -16,14 +16,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.stratify.DonutChart
+import com.example.stratify.R
+import com.example.stratify.Screen
 
 @Composable
-fun DashboardScreen() {
+fun DashboardScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -31,20 +35,14 @@ fun DashboardScreen() {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        // Title
-        Box(
+        // Stratify Logo
+        Image(
+            painter = painterResource(id = R.drawable.logo_stratify2),
+            contentDescription = "Stratify Logo",
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Stratify Analysis", // Assuming @string/app_name_analysis
-                color = Color(0xFF800000), // Assuming @color/maroon_primary
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
+                .height(30.dp)
+                .padding(bottom = 12.dp)
+        )
 
         // Search Bar
         OutlinedTextField(
@@ -67,7 +65,7 @@ fun DashboardScreen() {
         // Monitored Applications Section
         SectionHeader("Monitored Applications")
         Spacer(modifier = Modifier.height(8.dp))
-        MonitoredAppCard()
+        MonitoredAppCard(navController = navController)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -100,7 +98,7 @@ fun SectionHeader(title: String) {
 }
 
 @Composable
-fun MonitoredAppCard() {
+fun MonitoredAppCard(navController: NavController) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -151,7 +149,7 @@ fun MonitoredAppCard() {
                     totalReviews = 1200
                 )
                 Button(
-                    onClick = { /* TODO: Handle click */ },
+                    onClick = { navController.navigate(Screen.FullAnalysis.route) },
                     modifier = Modifier
                         .height(32.dp)
                         .padding(top = 4.dp),
@@ -218,5 +216,6 @@ fun RecommendationAppItem(icon: ImageVector, appName: String, rating: String) {
 @Preview(showBackground = true)
 @Composable
 fun DashboardScreenPreview() {
-    DashboardScreen()
+    // Preview doesn't have a NavController, so we can't show the full screen.
+    // We can either pass a fake NavController or show a simplified version of the screen.
 }

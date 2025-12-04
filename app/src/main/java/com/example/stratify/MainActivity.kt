@@ -1,14 +1,13 @@
 package com.example.stratify
 
-import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
@@ -17,14 +16,17 @@ import androidx.navigation.compose.rememberNavController
 import com.example.stratify.ui.dashboard.DashboardScreen
 import com.example.stratify.ui.full_analysis.FullAnalysisScreen
 import com.example.stratify.ui.main.BottomNavigationBar
+import com.example.stratify.ui.scrum.ScrumScreen
 import com.example.stratify.ui.theme.StratifyTheme
 import com.example.stratify.view.profile.ProfileEditScreen
+import com.example.stratify.view.profile.SharedViewModel
 import com.example.stratify.view.user.ProfileOptionsScreen
 import com.google.firebase.auth.FirebaseAuth
 
 sealed class Screen(val route: String) {
     object Dashboard : Screen("dashboard")
     object FullAnalysis : Screen("full_analysis")
+    object Scrum : Screen("scrum")
     object MainWorkspace : Screen("main_workspace")
     object ProfileOptions : Screen("profile_options")
     object ProfileEdit : Screen("profile_edit")
@@ -32,18 +34,21 @@ sealed class Screen(val route: String) {
 }
 
 class MainActivity : ComponentActivity() {
+
+    private val sharedViewModel: SharedViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             StratifyTheme {
-                AppNavigation()
+                AppNavigation(viewModel = sharedViewModel)
             }
         }
     }
 }
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(viewModel: SharedViewModel) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
@@ -57,18 +62,19 @@ fun AppNavigation() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Dashboard.route) {
-                DashboardScreen()
+                DashboardScreen(navController = navController)
             }
 
             composable(Screen.FullAnalysis.route) {
                 FullAnalysisScreen(onBackPressed = { navController.popBackStack() })
             }
 
+            composable(Screen.Scrum.route) {
+                ScrumScreen()
+            }
+
             composable(Screen.MainWorkspace.route) {
-                // Launch the MainWorkspace Activity instead of trying to compose it
-                LaunchedEffect(Unit) {
-                    context.startActivity(Intent(context, MainWorkspace::class.java))
-                }
+                MainWorkspaceScreen(viewModel = viewModel)
             }
 
             composable(Screen.ProfileOptions.route) {

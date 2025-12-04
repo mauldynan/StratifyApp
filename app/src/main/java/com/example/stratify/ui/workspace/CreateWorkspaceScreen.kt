@@ -27,12 +27,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateWorkspaceScreen(onBackPressed: () -> Unit, onWorkspaceCreated: (String) -> Unit) {
+fun CreateWorkspaceScreen(
+    onBackPressed: () -> Unit,
+    onWorkspaceCreated: (String, String, String) -> Unit
+) {
     var workspaceName by remember { mutableStateOf("") }
+    var workspaceCode by remember { mutableStateOf("") }
+    var workspacePassword by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -66,11 +72,28 @@ fun CreateWorkspaceScreen(onBackPressed: () -> Unit, onWorkspaceCreated: (String
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = workspaceCode,
+                onValueChange = { workspaceCode = it },
+                label = { Text("Workspace Code") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = workspacePassword,
+                onValueChange = { workspacePassword = it },
+                label = { Text("Password") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation()
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Button(
-                onClick = { onWorkspaceCreated(workspaceName) },
+                onClick = { onWorkspaceCreated(workspaceName, workspaceCode, workspacePassword) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = workspaceName.isNotBlank()
+                enabled = workspaceName.isNotBlank() && workspaceCode.isNotBlank() && workspacePassword.isNotBlank()
             ) {
                 Text("Create Workspace")
             }

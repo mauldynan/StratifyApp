@@ -1,11 +1,6 @@
 package com.example.stratify
 
-import android.content.Context
 import android.net.Uri
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +23,7 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -40,62 +36,43 @@ import androidx.navigation.compose.rememberNavController
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.integration.compose.placeholder
-import com.example.stratify.data.Workspace
-import com.example.stratify.ui.theme.StratifyTheme
 import com.example.stratify.ui.workspace.CreateWorkspaceScreen
 import com.example.stratify.ui.workspace.JoinWorkspaceScreen
 import com.example.stratify.ui.workspace.WorkspaceDetailScreen
 import com.example.stratify.ui.workspace.WorkspaceListScreen
 import com.example.stratify.ui.workspace.WorkspaceScreen
 import com.example.stratify.view.profile.SharedViewModel
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.launch
 
-class MainWorkspace : ComponentActivity() {
-
-    private val sharedViewModel: SharedViewModel by viewModels()
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        val startDestination = getStartDestination(this)
-
-        setContent {
-            StratifyTheme {
-                WorkspaceApp(startDestination = startDestination, viewModel = sharedViewModel)
-            }
-        }
+/**
+ * Main composable for the Workspace section. This is the entry point from MainActivity's NavHost.
+ */
+@Composable
+fun MainWorkspaceScreen(viewModel: SharedViewModel) {
+    val startDestination = if (viewModel.workspaces.isEmpty()) {
+        WorkspaceScreen.Start.route
+    } else {
+        WorkspaceScreen.WorkspaceList.route
     }
 
-    private fun getStartDestination(context: Context): String {
-        val prefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        val json = prefs.getString("workspace_list_json", null)
-        return if (!json.isNullOrEmpty()) {
-            val type = object : TypeToken<List<Workspace>>() {}.type
-            val workspaceList: List<Workspace> = Gson().fromJson(json, type)
-            if (workspaceList.isNotEmpty()) WorkspaceScreen.WorkspaceList.route else WorkspaceScreen.Start.route
-        } else {
-            WorkspaceScreen.Start.route
-        }
-    }
+    WorkspaceApp(startDestination = startDestination, viewModel = viewModel)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WorkspaceApp(startDestination: String, viewModel: SharedViewModel) {
+private fun WorkspaceApp(startDestination: String, viewModel: SharedViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    val displayName = viewModel.displayName.observeAsState(initial = "")
-    val photoUri = viewModel.photoUri.observeAsState(initial = null)
+    val displayName by viewModel.displayName.observeAsState(initial = "")
+    val photoUri by viewModel.photoUri.observeAsState(initial = null)
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ProfileDrawerContent(
-                displayName = displayName.value,
-                photoUri = photoUri.value,
+                displayName = displayName,
+                photoUri = photoUri,
                 onLogoutClick = {
                     // TODO: Handle logout
                 }
@@ -106,14 +83,15 @@ fun WorkspaceApp(startDestination: String, viewModel: SharedViewModel) {
             startDestination = startDestination,
             openDrawer = {
                 scope.launch { drawerState.open() }
-            }
+            },
+            viewModel = viewModel
         )
     }
 }
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun ProfileDrawerContent(displayName: String, photoUri: Uri?, onLogoutClick: () -> Unit) {
+private fun ProfileDrawerContent(displayName: String, photoUri: Uri?, onLogoutClick: () -> Unit) {
     ModalDrawerSheet {
         Column(
             modifier = Modifier
@@ -156,7 +134,7 @@ fun ProfileDrawerContent(displayName: String, photoUri: Uri?, onLogoutClick: () 
 }
 
 @Composable
-fun WorkspaceNavHost(startDestination: String, openDrawer: () -> Unit) {
+private fun WorkspaceNavHost(startDestination: String, openDrawer: () -> Unit, viewModel: SharedViewModel) {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
@@ -177,9 +155,10 @@ fun WorkspaceNavHost(startDestination: String, openDrawer: () -> Unit) {
         }
         composable(WorkspaceScreen.CreateWorkspace.route) {
             CreateWorkspaceScreen(
-                onWorkspaceCreated = {
+                onWorkspaceCreated = { name, code, password ->
+                    viewModel.createWorkspace(name, code, password)
                     navController.navigate(WorkspaceScreen.WorkspaceList.route) {
-                        popUpTo(navController.graph.id) { inclusive = true }
+                        popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
                     }
                 },
                 onBackPressed = { navController.navigateUp() }
@@ -187,13 +166,19 @@ fun WorkspaceNavHost(startDestination: String, openDrawer: () -> Unit) {
         }
         composable(WorkspaceScreen.JoinWorkspace.route) {
             JoinWorkspaceScreen(
-                onWorkspaceJoined = { navController.navigate(WorkspaceScreen.WorkspaceList.route) },
+                onWorkspaceJoined = { code, password ->
+                    if (viewModel.joinWorkspace(code, password)) {
+                        navController.navigate(WorkspaceScreen.WorkspaceList.route) {
+                            popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
+                        }
+                    }
+                },
                 onBackPressed = { navController.navigateUp() }
             )
         }
         composable(WorkspaceScreen.WorkspaceList.route) {
             WorkspaceListScreen(
-                onNavigateToStart = { navController.navigate(WorkspaceScreen.Start.route) },
+                viewModel = viewModel,
                 onNavigateToWorkspaceDetail = { workspaceId ->
                     navController.navigate(WorkspaceScreen.WorkspaceDetail.createRoute(workspaceId))
                 },

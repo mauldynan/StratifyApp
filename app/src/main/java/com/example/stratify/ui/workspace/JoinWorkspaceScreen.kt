@@ -24,16 +24,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JoinWorkspaceScreen(
-    onWorkspaceJoined: () -> Unit,
+    onWorkspaceJoined: (String, String) -> Unit,
     onBackPressed: () -> Unit
 ) {
-    // State to hold the text input
-    var joinCode by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -41,7 +42,6 @@ fun JoinWorkspaceScreen(
                 title = { Text("Join Workspace") },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        // Using AutoMirrored icon as requested
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
@@ -51,7 +51,6 @@ fun JoinWorkspaceScreen(
             )
         }
     ) { paddingValues ->
-        // Actual UI Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -60,15 +59,26 @@ fun JoinWorkspaceScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "Enter the code to join a workspace")
+            Text(text = "Enter the details to join a workspace")
 
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
-                value = joinCode,
-                onValueChange = { joinCode = it },
+                value = code,
+                onValueChange = { code = it },
                 label = { Text("Workspace Code") },
                 singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -76,11 +86,10 @@ fun JoinWorkspaceScreen(
 
             Button(
                 onClick = {
-                    // Logic to validate code would go here
-                    onWorkspaceJoined()
+                    onWorkspaceJoined(code, password)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = joinCode.isNotBlank() // Disable button if empty
+                enabled = code.isNotBlank() && password.isNotBlank()
             ) {
                 Text("Join")
             }
