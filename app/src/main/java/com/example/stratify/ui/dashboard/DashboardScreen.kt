@@ -26,64 +26,77 @@ import com.example.stratify.DonutChart
 import com.example.stratify.R
 import com.example.stratify.Screen
 
+// --- Colors ---
+private val maroonPrimary = Color(0xFF800000)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(navController: NavController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
-    ) {
-        // Stratify Logo
-        Image(
-            painter = painterResource(id = R.drawable.logo_stratify2),
-            contentDescription = "Stratify Logo",
-            modifier = Modifier
-                .height(30.dp)
-                .padding(bottom = 12.dp)
-        )
-
-        // Search Bar
-        OutlinedTextField(
-            value = "",
-            onValueChange = { },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(45.dp),
-            placeholder = { Text("Search", color = Color(0xFFB0B0B0)) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
-            shape = RoundedCornerShape(50),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.Gray,
-                unfocusedBorderColor = Color.LightGray,
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Image(
+                        painter = painterResource(id = R.drawable.logo_stratify2),
+                        contentDescription = "Stratify Logo",
+                        modifier = Modifier.height(30.dp)
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = maroonPrimary
+                )
             )
-        )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .verticalScroll(rememberScrollState())
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            // Search Bar
+            OutlinedTextField(
+                value = "",
+                onValueChange = { },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(45.dp),
+                placeholder = { Text("Search", color = Color(0xFFB0B0B0)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
+                shape = RoundedCornerShape(50),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Gray,
+                    unfocusedBorderColor = Color.LightGray,
+                )
+            )
 
-        Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-        // Monitored Applications Section
-        SectionHeader("Monitored Applications")
-        Spacer(modifier = Modifier.height(8.dp))
-        MonitoredAppCard(navController = navController)
+            // Monitored Applications Section
+            SectionHeader("Monitored Applications")
+            Spacer(modifier = Modifier.height(8.dp))
+            MonitoredAppCard(navController = navController)
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-        // Recently Viewed Apps Section
-        SectionHeader("Recently Viewed Apps")
-        Spacer(modifier = Modifier.height(8.dp))
-        RecentlyViewedApps()
+            // Recently Viewed Apps Section
+            SectionHeader("Recently Viewed Apps")
+            Spacer(modifier = Modifier.height(8.dp))
+            RecentlyViewedApps()
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-        // Recommendation Apps Section
-        SectionHeader("Recommendation Apps")
-        Spacer(modifier = Modifier.height(8.dp))
-        RecommendationAppItem(
-            icon = Icons.Default.Star,
-            appName = "Blibli",
-            rating = "4.8 / 5 Bintang"
-        )
+            // Recommendation Apps Section
+            SectionHeader("Recommendation Apps")
+            Spacer(modifier = Modifier.height(8.dp))
+            RecommendationAppItem(
+                icon = Icons.Default.Star,
+                appName = "Blibli",
+                rating = "4.8 / 5 Bintang"
+            )
+        }
     }
 }
 

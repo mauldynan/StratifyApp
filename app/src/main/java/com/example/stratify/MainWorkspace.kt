@@ -1,6 +1,7 @@
 package com.example.stratify
 
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -11,17 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -29,7 +20,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -43,6 +38,10 @@ import com.example.stratify.ui.workspace.WorkspaceListScreen
 import com.example.stratify.ui.workspace.WorkspaceScreen
 import com.example.stratify.view.profile.SharedViewModel
 import kotlinx.coroutines.launch
+
+// --- Colors ---
+private val maroonPrimary = Color(0xFF800000)
+private val textYellow = Color(0xFFFFEB3B)
 
 /**
  * Main composable for the Workspace section. This is the entry point from MainActivity's NavHost.
@@ -79,13 +78,32 @@ private fun WorkspaceApp(startDestination: String, viewModel: SharedViewModel) {
             )
         }
     ) {
-        WorkspaceNavHost(
-            startDestination = startDestination,
-            openDrawer = {
-                scope.launch { drawerState.open() }
-            },
-            viewModel = viewModel
-        )
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            "Workspace",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
+                            color = textYellow
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = maroonPrimary
+                    )
+                )
+            }
+        ) { paddingValues ->
+            WorkspaceNavHost(
+                modifier = Modifier.padding(paddingValues),
+                startDestination = startDestination,
+                openDrawer = {
+                    scope.launch { drawerState.open() }
+                },
+                viewModel = viewModel
+            )
+        }
     }
 }
 
@@ -134,21 +152,38 @@ private fun ProfileDrawerContent(displayName: String, photoUri: Uri?, onLogoutCl
 }
 
 @Composable
-private fun WorkspaceNavHost(startDestination: String, openDrawer: () -> Unit, viewModel: SharedViewModel) {
+private fun WorkspaceNavHost(
+    modifier: Modifier = Modifier,
+    startDestination: String,
+    openDrawer: () -> Unit,
+    viewModel: SharedViewModel
+) {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = startDestination) {
+    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
         composable(WorkspaceScreen.Start.route) {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Button(onClick = { navController.navigate(WorkspaceScreen.CreateWorkspace.route) }) {
+                Button(
+                    onClick = { navController.navigate(WorkspaceScreen.CreateWorkspace.route) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = maroonPrimary,
+                        contentColor = textYellow
+                    )
+                ) {
                     Text("Create Workspace")
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { navController.navigate(WorkspaceScreen.JoinWorkspace.route) }) {
+                Button(
+                    onClick = { navController.navigate(WorkspaceScreen.JoinWorkspace.route) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = maroonPrimary,
+                        contentColor = textYellow
+                    )
+                ) {
                     Text("Join Workspace")
                 }
             }

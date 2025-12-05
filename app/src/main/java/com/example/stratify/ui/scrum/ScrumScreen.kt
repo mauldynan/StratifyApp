@@ -1,5 +1,6 @@
 package com.example.stratify.ui.scrum
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,9 +15,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.stratify.R
 
 // 1. Updated data classes to match your requirements
 enum class TaskStatus(val displayName: String) {
@@ -34,6 +38,10 @@ data class Task(
     var status: TaskStatus
 )
 
+// --- Colors ---
+private val maroonPrimary = Color(0xFF800000)
+private val textYellow = Color(0xFFFFEB3B)
+
 // 2. Updated sample data
 fun getSampleTasks(): SnapshotStateList<Task> {
     return mutableStateListOf(
@@ -43,6 +51,7 @@ fun getSampleTasks(): SnapshotStateList<Task> {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScrumScreen() {
     // State for the tasks and search query
@@ -56,9 +65,27 @@ fun ScrumScreen() {
     }
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "Scrum Board",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = textYellow
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = maroonPrimary
+                )
+            )
+        },
         floatingActionButton = {
-            FloatingActionButton(onClick = { /* TODO: Implement logic to add a new task */ }) {
-                Icon(Icons.Default.Add, contentDescription = "Add New Task")
+            FloatingActionButton(
+                onClick = { /* TODO: Implement logic to add a new task */ },
+                containerColor = maroonPrimary
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add New Task", tint = Color.White)
             }
         }
     ) { paddingValues ->
@@ -207,7 +234,7 @@ private fun EditTaskView(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onSave) {
-            Icon(Icons.Default.Done, contentDescription = "Save Changes", tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Default.Done, contentDescription = "Save Changes", tint = maroonPrimary)
         }
         IconButton(onClick = onCancel) {
             Icon(Icons.Default.Close, contentDescription = "Cancel Edit")
@@ -251,7 +278,7 @@ private fun StatusBadge(status: TaskStatus) {
         TaskStatus.TODO -> MaterialTheme.colorScheme.secondary
         TaskStatus.IN_PROGRESS -> MaterialTheme.colorScheme.tertiary
         TaskStatus.TO_VERIFY -> MaterialTheme.colorScheme.error
-        TaskStatus.DONE -> MaterialTheme.colorScheme.primary
+        TaskStatus.DONE -> maroonPrimary
     }
     Card(
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
