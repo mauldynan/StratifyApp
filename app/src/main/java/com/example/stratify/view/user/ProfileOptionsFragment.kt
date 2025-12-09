@@ -1,151 +1,221 @@
 package com.example.stratify.view.user
 
-import android.content.Context
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.activityViewModels
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.example.stratify.R
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
+import com.example.stratify.R // Pastikan import R sesuai package kamu
 import com.example.stratify.view.profile.SharedViewModel
 import com.google.firebase.auth.FirebaseAuth
 
-class ProfileOptionsFragment : DialogFragment() {
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalGlideComposeApi::class)
+@Composable
+fun ProfileOptionsScreen(
+    onNavigateBack: () -> Unit,
+    onEditProfileClicked: () -> Unit, // Navigasi ke Edit Profile
+    onLogoutClicked: () -> Unit // Logika Logout
+) {
+    val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    val currentUser = auth.currentUser
 
-    interface OnOptionSelectedListener {
-        fun onProfileEditSelected()
-        fun onLogoutSelected()
-        fun onEnglishSelected()
-        fun onIndonesianSelected()
-        fun onAccountSelected()
-        fun onLanguageSelected()
-    }
+    // Menggunakan SharedViewModel (Opsional, bisa pakai currentUser langsung)
+    // Jika SharedViewModel error saat dipanggil di sini, bisa dihapus dan pakai data Firebase langsung
+    val sharedViewModel: SharedViewModel = viewModel()
 
-    private var listener: OnOptionSelectedListener? = null
-    private val sharedViewModel: SharedViewModel by activityViewModels()
+    // State Data User
+    val displayName by sharedViewModel.displayName.observeAsState(currentUser?.displayName ?: "No Name")
+    val photoUri by sharedViewModel.photoUri.observeAsState(currentUser?.photoUrl)
+    val email = currentUser?.email ?: "No Email"
 
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        if (context is OnOptionSelectedListener) {
-            listener = context
-        } else {
-            throw RuntimeException("$context must implement OnOptionSelectedListener")
+    // State untuk Dropdown Menu
+    var isAccountExpanded by remember { mutableStateOf(false) }
+    var isLanguageExpanded by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Profile Options", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(Color.White)
+                .verticalScroll(rememberScrollState()) // Agar bisa di-scroll
+        ) {
+
+            // --- HEADER PROFILE ---
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Foto Profil (Glide)
+                GlideImage(
+                    model = photoUri ?: R.drawable.ic_profile, // Fallback drawable
+                    contentDescription = "Profile Photo",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                ) {
+                    it.placeholder(R.drawable.ic_profile)
+                        .error(R.drawable.ic_profile)
+                        .circleCrop()
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Nama & Email
+                Text(
+                    text = displayName,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(
+                    text = email,
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
+
+            Divider(thickness = 1.dp, color = Color.LightGray)
+
+            // --- MENU OPTIONS ---
+
+            // 1. Edit Profile
+            OptionItem(
+                text = "Edit Profile",
+                onClick = onEditProfileClicked
+            )
+
+            // 2. Account (Expandable)
+            ExpandableOptionItem(
+                text = "Account",
+                isExpanded = isAccountExpanded,
+                onToggle = { isAccountExpanded = !isAccountExpanded }
+            ) {
+                // Sub-menu Account: LOGOUT
+                OptionSubItem(
+                    text = "Logout",
+                    onClick = onLogoutClicked,
+                    textColor = Color.Red // Merah biar kelihatan tombol danger
+                )
+            }
+
+            // 3. Language (Expandable)
+            ExpandableOptionItem(
+                text = "Language",
+                isExpanded = isLanguageExpanded,
+                onToggle = { isLanguageExpanded = !isLanguageExpanded }
+            ) {
+                // Sub-menu Language
+                OptionSubItem(text = "English", onClick = { /* Logic Ganti Bahasa */ })
+                OptionSubItem(text = "Indonesia", onClick = { /* Logic Ganti Bahasa */ })
+            }
         }
     }
+}
 
-    override fun onDetach() {
-        super.onDetach()
-        listener = null
+// --- KOMPONEN HELPER (Biar kodenya rapi) ---
+
+@Composable
+fun OptionItem(
+    text: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = text, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        // Bisa tambah icon panah kanan kalau mau
     }
+    Divider(thickness = 0.5.dp, color = Color.LightGray, modifier = Modifier.padding(horizontal = 24.dp))
+}
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_profile_options, container, false)
+@Composable
+fun ExpandableOptionItem(
+    text: String,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = text, fontSize = 16.sp, modifier = Modifier.weight(1f))
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint = Color.Gray
+            )
+        }
+
+        // Tampilkan konten sub-menu jika expanded
+        if (isExpanded) {
+            content()
+        }
+
+        Divider(thickness = 0.5.dp, color = Color.LightGray, modifier = Modifier.padding(horizontal = 24.dp))
     }
+}
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        val profileImage = view.findViewById<ImageView>(R.id.ivProfileImage)
-        val profileName = view.findViewById<TextView>(R.id.tvProfileName)
-
-        observeViewModel(profileImage, profileName)
-        setupClickListeners(view)
-
-    }
-
-    override fun onResume() {
-        super.onResume()
-
-        val view = view ?: return
-        val profileImage = view.findViewById<ImageView>(R.id.ivProfileImage)
-        val profileName = view.findViewById<TextView>(R.id.tvProfileName)
-        val profileEmail = view.findViewById<TextView>(R.id.tvProfileEmail)
-
-        if (profileImage != null && profileName != null && profileEmail != null) {
-            loadInitialData(profileImage, profileName, profileEmail)
-        }
-    }
-
-
-    private fun loadInitialData(imageView: ImageView, nameView: TextView, emailView: TextView) {
-        val user = FirebaseAuth.getInstance().currentUser ?: return
-
-        if (sharedViewModel.displayName.value == null && user.displayName != null) {
-            sharedViewModel.displayName.value = user.displayName
-        }
-        if (sharedViewModel.photoUri.value == null && user.photoUrl != null) {
-            sharedViewModel.photoUri.value = user.photoUrl
-        }
-
-        val initialName = sharedViewModel.displayName.value ?: user.displayName
-        val initialPhotoUri = sharedViewModel.photoUri.value ?: user.photoUrl
-
-        nameView.text = initialName
-        emailView.text = user.email
-
-        val placeholderResId = resources.getIdentifier("ic_profile", "drawable", requireContext().packageName)
-
-        Glide.with(this)
-            .load(initialPhotoUri)
-            .placeholder(placeholderResId.takeIf { it != 0 } ?: R.drawable.ic_profile)
-            .circleCrop()
-            .into(imageView)
-    }
-
-    private fun observeViewModel(imageView: ImageView, nameView: TextView) {
-        sharedViewModel.displayName.observe(viewLifecycleOwner) { newName ->
-            nameView.text = newName
-        }
-
-        sharedViewModel.photoUri.observe(viewLifecycleOwner) { newUri ->
-            Glide.with(this)
-                .load(newUri)
-                .diskCacheStrategy(DiskCacheStrategy.NONE)
-                .skipMemoryCache(true)
-                .placeholder(R.drawable.ic_profile)
-                .circleCrop()
-                .into(imageView)
-        }
-    }
-
-    private fun setupClickListeners(view: View) {
-        view.findViewById<TextView>(R.id.optionProfileEdit)?.setOnClickListener {
-            listener?.onProfileEditSelected()
-        }
-
-        view.findViewById<TextView>(R.id.optionLogout)?.setOnClickListener {
-            listener?.onLogoutSelected()
-        }
-
-        view.findViewById<TextView>(R.id.optionEnglish)?.setOnClickListener {
-            listener?.onEnglishSelected()
-        }
-        view.findViewById<TextView>(R.id.optionIndonesia)?.setOnClickListener {
-            listener?.onIndonesianSelected()
-        }
-
-        view.findViewById<TextView>(R.id.optionAccount)?.setOnClickListener {
-            listener?.onAccountSelected()
-            toggleVisibility(view.findViewById(R.id.account_options_container))
-        }
-        view.findViewById<TextView>(R.id.optionLanguage)?.setOnClickListener {
-            listener?.onLanguageSelected()
-            toggleVisibility(view.findViewById(R.id.language_options_container))
-        }
-    }
-
-    private fun toggleVisibility(container: LinearLayout?) {
-        container?.let {
-            it.visibility = if (it.visibility == View.GONE) View.VISIBLE else View.GONE
-        }
+@Composable
+fun OptionSubItem(
+    text: String,
+    onClick: () -> Unit,
+    textColor: Color = Color.Black
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .background(Color(0xFFF5F5F5)) // Background agak abu untuk sub-item
+            .padding(start = 48.dp, end = 24.dp, top = 12.dp, bottom = 12.dp)
+    ) {
+        Text(text = text, fontSize = 14.sp, color = textColor)
     }
 }

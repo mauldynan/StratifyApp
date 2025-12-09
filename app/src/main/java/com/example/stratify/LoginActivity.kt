@@ -1,87 +1,328 @@
 package com.example.stratify
 
+import com.example.stratify.MainActivity
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import com.example.stratify.databinding.ActivityLoginBinding
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.stratify.ForgotPasswordActivity
+import com.example.stratify.R
+import com.example.stratify.SignupActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 
-class LoginActivity : AppCompatActivity() {
+class LoginActivity : ComponentActivity() {
 
     private lateinit var auth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val binding = ActivityLoginBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        supportActionBar?.title = "Sign In"
-
-        // Initialize FirebaseAuth instance
         auth = FirebaseAuth.getInstance()
 
-        // Handle Sign In button click
-        binding.loginButton.setOnClickListener {
-            val email = binding.emailInputEditText.text.toString().trim()
-            val password = binding.passwordInputEditText.text.toString().trim()
+        setContent {
+            var errorMessage by remember { mutableStateOf<String?>(null) }
 
-            // Clear any previous error messages
-            binding.loginErrorText.visibility = View.GONE
+            // The main entry point for the Compose UI
+            LoginScreen(
+                errorMessage = errorMessage,
+                onLoginClicked = { email, password ->
+                    loginUser(email, password) { error ->
+                        errorMessage = error
+                    }
+                },
+                onGoogleSignInClicked = {
+                    // TODO: Implement Google Sign-In logic
+                    Toast.makeText(this, "Google Sign-In not implemented", Toast.LENGTH_SHORT).show()
+                },
+                onForgotPasswordClicked = {
+                    startActivity(Intent(this, ForgotPasswordActivity::class.java))
+                },
+                onSignUpClicked = {
+                    startActivity(Intent(this, SignupActivity::class.java))
+                },
+                onClearError = {
+                    errorMessage = null
+                }
+            )
+        }
+    }
 
-            // Validate fields
-            if (email.isEmpty() || password.isEmpty()) {
-                Toast.makeText(this, "Please enter email and password.", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+    private fun loginUser(email: String, password: String, onLoginFailed: (String) -> Unit) {
+        if (email.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this, "Please enter email and password.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show()
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                }
+                // Failure is handled by the OnFailureListener
             }
+            .addOnFailureListener { exception ->
+                val error = when (exception) {
+                    is FirebaseAuthInvalidUserException -> "Email is not registered."
+                    is FirebaseAuthInvalidCredentialsException -> "Incorrect password. Please try again."
+                    else -> "Login failed: ${exception.localizedMessage}"
+                }
+                onLoginFailed(error)
+            }
+    }
+}
 
-            // Attempt to sign in with Firebase
-            auth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this) { task ->
-                    if (task.isSuccessful) {
-                        // Sign in successful, navigate to the correct MainActivity
-                        Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show()
-                        
-                        // Use a specific Intent to avoid ambiguity between the two MainActivity files
-                        val intent = Intent(this, com.example.stratify.MainActivity::class.java)
-                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        startActivity(intent)
-                        finish() // Finish this activity so the user can't go back
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LoginScreen(
+    errorMessage: String?,
+    onLoginClicked: (String, String) -> Unit,
+    onGoogleSignInClicked: () -> Unit,
+    onForgotPasswordClicked: () -> Unit,
+    onSignUpClicked: () -> Unit,
+    onClearError: () -> Unit
+) {
+    // State variables to hold the input field values
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            // Definisikan warna yang diambil dari ellipse.jpg kamu
+            val glowColor = Color(0xFFFFE57F) // Kuning lembut
+
+// --- LINGKARAN ATAS ---
+            Box(
+                modifier = Modifier
+                    .size(600.dp) // Ukuran besar untuk efek "bleber"
+                    .align(Alignment.TopEnd)
+                    .offset(x = 200.dp, y = (-200).dp) // Posisi di pojok
+                    .background(
+                        // Ini yang bikin efek "Glow" memudar dari tengah ke luar
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(
+                                glowColor.copy(alpha = 0.5f), // Tengah: Kuning transparan
+                                Color.Transparent             // Pinggir: Hilang total
+                            ),
+                            radius = 1000f // Radius pendaran
+                        )
+                    )
+            )
+
+// --- LINGKARAN BAWAH ---
+            Box(
+                modifier = Modifier
+                    .size(600.dp)
+                    .align(Alignment.BottomStart)
+                    .offset(x = (-200).dp, y = 200.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(
+                                glowColor.copy(alpha = 0.5f),
+                                Color.Transparent
+                            ),
+                            radius = 1000f
+                        )
+                    )
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // App Logo
+                Image(
+                    painter = painterResource(id = R.drawable.logo_stratify2),
+                    contentDescription = "App Logo",
+                    modifier = Modifier
+                        .padding(top = 64.dp)
+                        .height(100.dp)
+                )
+
+                Text(
+                    text = "Login",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .align(Alignment.Start)
+                        .padding(top = 24.dp)
+                )
+
+                Text(
+                    text = "Access your account",
+                    color = Color.Gray,
+                    modifier = Modifier
+                        .align(Alignment.Start)
+                        .padding(top = 2.dp)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Email Input Field
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it; onClearError() },
+                    label = { Text("Email") },
+                    leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    isError = errorMessage != null
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Password Input Field
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it; onClearError() },
+                    label = { Text("Password") },
+                    leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null) },
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true,
+                    trailingIcon = {
+                        val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        val description = if (passwordVisible) "Hide password" else "Show password"
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = image, contentDescription = description)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    isError = errorMessage != null
+                )
+
+                // Forgot Password Text
+                Text(
+                    text = "Forgot Password?",
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(top = 8.dp)
+                        .clickable { onForgotPasswordClicked() }
+                )
+
+                // Error Message Display
+                errorMessage?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                // Login Button
+                Button(
+                    onClick = { onLoginClicked(email, password) },
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp)
+                        .height(50.dp)
+                ) {
+                    Text("Login", fontSize = 16.sp)
+                }
+
+                Text(
+                    text = "OR",
+                    modifier = Modifier.padding(vertical = 24.dp),
+                    color = Color.Gray
+                )
+
+                // Google Sign-In Button
+                OutlinedButton(
+                    onClick = { onGoogleSignInClicked() },
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = R.drawable.google_icon),
+                            contentDescription = "Google Icon",
+                            modifier = androidx . compose . ui . Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text("Continue with Google", color = Color.Black)
                     }
                 }
-                .addOnFailureListener { exception ->
-                    // Sign in failed, show appropriate error message
-                    binding.loginErrorText.visibility = View.VISIBLE
 
-                    when (exception) {
-                        is FirebaseAuthInvalidUserException -> {
-                            // User not found
-                            binding.loginErrorText.text = "Email is not registered."
-                        }
-                        is FirebaseAuthInvalidCredentialsException -> {
-                            // Incorrect password
-                            binding.loginErrorText.text = "Incorrect password. Please try again."
-                        }
-                        else -> {
-                            // Other errors
-                            binding.loginErrorText.text = "Login failed: ${exception.localizedMessage}"
-                        }
-                    }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Sign-up prompt
+                Row(
+                    modifier = Modifier.clickable { onSignUpClicked() },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Don't have an account?")
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Sign Up",
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
-        }
 
-        // Handle Sign Up link click
-        binding.signUpTextLink.setOnClickListener {
-            val intent = Intent(this, SignupActivity::class.java)
-            startActivity(intent)
+                Spacer(modifier = Modifier.height(32.dp))
+            }
         }
+    }
+}
 
-        // Handle Forgot Password link click
-        binding.forgotPasswordText.setOnClickListener {
-            val intent = Intent(this, ForgotPasswordActivity::class.java)
-            startActivity(intent)
-        }
+@Preview(showBackground = true, device = "id:pixel_5")
+@Composable
+fun LoginScreenPreview() {
+    MaterialTheme {
+        LoginScreen(
+            errorMessage = null,
+            onLoginClicked = { _, _ -> },
+            onGoogleSignInClicked = { },
+            onForgotPasswordClicked = { },
+            onSignUpClicked = { },
+            onClearError = { }
+        )
     }
 }

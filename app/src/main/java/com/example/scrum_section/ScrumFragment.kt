@@ -1,181 +1,195 @@
 package com.example.scrum_section
 
 import android.os.Bundle
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.ImageView
-import android.widget.SearchView
-import android.widget.TextView
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.scrum_section.adapter.TaskAdapter
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.scrum_section.data.TaskRepository
 import com.example.scrum_section.model.Task
 import com.example.scrum_section.util.TaskStatus
-import com.example.stratify.R
-import com.example.stratify.databinding.FragmentScrumBinding
-import com.google.android.material.tabs.TabLayout
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
+// --- ViewModel ---
+class ScrumViewModel : ViewModel() {
+
+    private val _tasks = MutableStateFlow<List<Task>>(emptyList())
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
+    private val _selectedStatus = MutableStateFlow(TaskStatus.ALL)
+    val selectedStatus: StateFlow<TaskStatus> = _selectedStatus
+
+    val filteredTasks: StateFlow<List<Task>> = combine(
+        _tasks, _searchQuery, _selectedStatus
+    ) { tasks, query, status ->
+        tasks.filter { task ->
+            val statusMatch = if (status == TaskStatus.ALL) true else task.status == status
+            val queryMatch = if (query.isBlank()) true else task.name.contains(query, ignoreCase = true)
+            statusMatch && queryMatch
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        loadTasks()
+    }
+
+    fun loadTasks() {
+        viewModelScope.launch {
+            _tasks.value = TaskRepository.getTasks()
+        }
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun onStatusSelected(status: TaskStatus) {
+        _selectedStatus.value = status
+    }
+}
+
+// --- Fragment ---
 class ScrumFragment : Fragment() {
 
-    private var _binding: FragmentScrumBinding? = null
-    private val binding get() = _binding!!
-
-    private lateinit var adapter: TaskAdapter
-    private var currentStatus = TaskStatus.ALL
-    private var fullTaskList = listOf<Task>()
+    private val viewModel: ScrumViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
-    ): View? {
-        _binding = FragmentScrumBinding.inflate(inflater, container, false)
-        val view = binding.root
-
-        setupRecyclerView()
-        setupFab()
-        setupTabLayout()
-        setupSearch()
-
-        return view
-    }
-
-    /**
-     * Sets up the RecyclerView with its adapter and layout manager.
-     */
-    private fun setupRecyclerView() {
-        fullTaskList = TaskRepository.getTasksByStatus(currentStatus)
-        adapter = TaskAdapter(fullTaskList.toMutableList())
-        binding.rvTasks.layoutManager = LinearLayoutManager(requireContext())
-        binding.rvTasks.adapter = adapter
-    }
-
-    /**
-     * Sets up the Floating Action Button to open the AddTaskDialog.
-     */
-    private fun setupFab() {
-        binding.btnAddTask.setOnClickListener {
-            // Show the dialog and pass a lambda to refresh data upon task creation.
-            AddTaskDialog { refreshData() }.show(parentFragmentManager, "AddTaskDialog")
-        }
-    }
-
-    /**
-     * Configures the TabLayout for filtering tasks by their status.
-     */
-    private fun setupTabLayout() {
-        val tabLayout = binding.tabLayout
-        val tabData = listOf(
-            "All" to R.color.gray,
-            "To Do" to R.color.blue,
-            "In Progress" to R.color.orange,
-            "To Verify" to R.color.purple,
-            "Done" to R.color.green
-        )
-
-        // Create and add tabs dynamically.
-        tabData.forEach { (title, colorRes) ->
-            val tab = tabLayout.newTab().setText(title)
-            tab.view.setBackgroundColor(requireContext().getColor(colorRes))
-            tabLayout.addTab(tab)
-        }
-
-        // Customize the selected tab indicator.
-        tabLayout.setSelectedTabIndicatorColor(requireContext().getColor(R.color.redw))
-        tabLayout.setSelectedTabIndicatorHeight(6)
-        tabLayout.setSelectedTabIndicatorGravity(TabLayout.INDICATOR_GRAVITY_BOTTOM)
-
-        // Add a listener to handle tab selection events.
-        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                currentStatus = when (tab?.position) {
-                    1 -> TaskStatus.TODO
-                    2 -> TaskStatus.IN_PROGRESS
-                    3 -> TaskStatus.TO_VERIFY
-                    4 -> TaskStatus.DONE
-                    else -> TaskStatus.ALL
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setContent {
+                MaterialTheme {
+                    ScrumScreen(
+                        viewModel = viewModel,
+                        onTaskClicked = { task ->
+                            TaskDetailDialog(task).show(childFragmentManager, "TaskDetailDialog")
+                        },
+                        onAddTaskClicked = {
+                            AddTaskDialog {
+                                // This lambda is called when a task is successfully added.
+                                // We reload the tasks to refresh the list.
+                                viewModel.loadTasks()
+                            }.show(childFragmentManager, "AddTaskDialog")
+                        }
+                    )
                 }
-                refreshData()
             }
-
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
-        })
-    }
-
-    /**
-     * Sets up the SearchView for filtering the task list.
-     */
-    private fun setupSearch() {
-        binding.header.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            // Called when the user submits the search query.
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                filterAndSort(query)
-                return true
-            }
-
-            // Called when the text in the search view changes.
-            override fun onQueryTextChange(newText: String?): Boolean {
-                filterAndSort(newText)
-                return true
-            }
-        })
-
-        try {
-            customizeSearchView()
-        } catch (e: Exception) {
-            // Log or handle the exception if something goes wrong during customization.
         }
     }
+}
 
-    /**
-     * Customizes the appearance of the SearchView, such as icon size and text style.
-     */
-    private fun customizeSearchView() {
-        val searchTextId = binding.header.searchView.context.resources
-            .getIdentifier("android:id/search_src_text", null, null)
-        val searchText = binding.header.searchView.findViewById<TextView>(searchTextId)
+// --- Composables ---
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ScrumScreen(
+    viewModel: ScrumViewModel,
+    onTaskClicked: (Task) -> Unit,
+    onAddTaskClicked: () -> Unit
+) {
+    val tasks by viewModel.filteredTasks.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val selectedStatus by viewModel.selectedStatus.collectAsState()
 
-        val searchIconId = binding.header.searchView.context.resources
-            .getIdentifier("android:id/search_mag_icon", null, null)
-        val searchIcon = binding.header.searchView.findViewById<ImageView>(searchIconId)
+    Scaffold(
+        topBar = {
+            Column {
+                TextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.onSearchQueryChanged(it) },
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    placeholder = { Text("Search tasks...") },
+                    singleLine = true
+                )
 
-        // ... (rest of the code is the same)
-
-        val layoutParams = searchIcon.layoutParams
-        layoutParams.width = (18 * resources.displayMetrics.density).toInt()
-        layoutParams.height = (18 * resources.displayMetrics.density).toInt()
-        searchIcon.layoutParams = layoutParams
+                val statuses = TaskStatus.values()
+                TabRow(selectedTabIndex = statuses.indexOf(selectedStatus)) {
+                    statuses.forEach { status ->
+                        Tab(
+                            selected = status == selectedStatus,
+                            onClick = { viewModel.onStatusSelected(status) },
+                            text = { Text(status.name) }
+                        )
+                    }
+                }
+            }
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onAddTaskClicked) {
+                Icon(Icons.Default.Add, contentDescription = "Add Task")
+            }
+        }
+    ) { padding ->
+        LazyColumn(modifier = Modifier.padding(padding).padding(16.dp)) {
+            items(tasks, key = { it.id }) { task ->
+                TaskItem(task = task, onClick = { onTaskClicked(task) })
+            }
+        }
     }
+}
 
-    /**
-     * Reloads the task list from the repository and applies the current search filter.
-     */
-    private fun refreshData() {
-        fullTaskList = TaskRepository.getTasksByStatus(currentStatus)
-        // Apply the current search query to the newly loaded list.
-        filterAndSort(binding.header.searchView.query.toString())
-    }
-
-    /**
-     * Filters the task list based on the search query and updates the RecyclerView.
-     * @param query The search text entered by the user.
-     */
-    private fun filterAndSort(query: String?) {
-        val searchText = query?.lowercase()?.trim() ?: ""
-        // Filter the full list based on the task name.
-        val filtered = fullTaskList.filter { it.name.lowercase().contains(searchText) }
-        adapter.updateData(filtered) // Update the adapter with the filtered data.
-    }
-
-    /**
-     * Cleans up the binding when the view is destroyed to prevent memory leaks.
-     */
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
+@Composable
+fun TaskItem(task: Task, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable(onClick = onClick),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = task.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = "Created by: ${task.createdBy}")
+            Text(text = "Deadline: ${task.deadline}")
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = task.status.name,
+                color = when (task.status) {
+                    TaskStatus.TODO -> Color.Blue
+                    TaskStatus.IN_PROGRESS -> Color(0xFFFFA500) // Orange
+                    TaskStatus.TO_VERIFY -> Color.Magenta
+                    TaskStatus.DONE -> Color.Green
+                    else -> Color.Gray
+                }
+            )
+        }
     }
 }
