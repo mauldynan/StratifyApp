@@ -54,14 +54,35 @@ fun getSampleTasks(): SnapshotStateList<Task> {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScrumScreen() {
-    // State for the tasks and search query
+    // State for the tasks, search query, and the add task dialog
     val tasks = remember { getSampleTasks() }
     var searchQuery by remember { mutableStateOf("") }
+    var showAddTaskDialog by remember { mutableStateOf(false) }
 
     val filteredTasks = if (searchQuery.isEmpty()) {
         tasks
     } else {
         tasks.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
+
+    // --- Add Task Dialog ---
+    if (showAddTaskDialog) {
+        AddTaskDialog(
+            onDismiss = { showAddTaskDialog = false },
+            onTaskAdded = { name, deadline, department ->
+                val newId = (tasks.maxOfOrNull { it.id } ?: 0) + 1
+                tasks.add(
+                    Task(
+                        id = newId,
+                        name = name,
+                        deadline = deadline,
+                        department = department,
+                        status = TaskStatus.TODO // New tasks default to "To-Do"
+                    )
+                )
+                showAddTaskDialog = false
+            }
+        )
     }
 
     Scaffold(
@@ -82,7 +103,7 @@ fun ScrumScreen() {
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* TODO: Implement logic to add a new task */ },
+                onClick = { showAddTaskDialog = true }, // Updated to show the dialog
                 containerColor = maroonPrimary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add New Task", tint = Color.White)
@@ -242,6 +263,62 @@ private fun EditTaskView(
     }
 }
 
+@Composable
+private fun AddTaskDialog(
+    onDismiss: () -> Unit,
+    onTaskAdded: (name: String, deadline: String, department: String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var deadline by remember { mutableStateOf("") }
+    var department by remember { mutableStateOf("") }
+    val isFormValid by remember(name, deadline, department) {
+        derivedStateOf { name.isNotBlank() && deadline.isNotBlank() && department.isNotBlank() }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add New Task", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Task Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = deadline,
+                    onValueChange = { deadline = it },
+                    label = { Text("Deadline") },
+                    placeholder = { Text("e.g., 2024-12-31") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = department,
+                    onValueChange = { department = it },
+                    label = { Text("Department") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onTaskAdded(name, deadline, department) },
+                enabled = isFormValid
+            ) {
+                Text("Add Task")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
 
 @Composable
 private fun StatusSelector(selectedStatus: TaskStatus, onStatusSelected: (TaskStatus) -> Unit) {
