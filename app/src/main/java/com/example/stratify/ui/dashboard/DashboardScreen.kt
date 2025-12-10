@@ -2,6 +2,7 @@ package com.example.stratify.ui.dashboard
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,10 +21,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.stratify.DonutChart
 import com.example.stratify.R
 import com.example.stratify.Screen
@@ -36,11 +41,30 @@ fun DashboardScreen(navController: NavController) {
         topBar = {
             TopAppBar(
                 title = {
-                    Image(
-                        painter = painterResource(id = R.drawable.logo_stratify2),
-                        contentDescription = "Stratify Logo",
-                        modifier = Modifier.height(30.dp)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_stratify3),
+                            contentDescription = "Stratify Logo",
+                            modifier = Modifier.height(72.dp)
+                        )
+
+                        // Account icon at the header end
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_acc),
+                            contentDescription = "Account",
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .padding(4.dp)
+                                .clickable { navController.navigate(Screen.ProfileOptions.route) }
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = maroonPrimary
@@ -56,20 +80,41 @@ fun DashboardScreen(navController: NavController) {
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Search Bar
-            OutlinedTextField(
-                value = "",
-                onValueChange = { },
+            // Title for the screen section
+            val searchQuery = remember { mutableStateOf("") }
+            Text(
+                text = "Analysis Apps",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = maroonPrimary,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(45.dp),
+                    .padding(top = 2.dp, bottom = 8.dp),
+                textAlign = TextAlign.Center
+            )
+
+            // Search Bar
+            OutlinedTextField(
+                value = searchQuery.value,
+                onValueChange = { searchQuery.value = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp),
                 placeholder = { Text("Search", color = Color(0xFFB0B0B0)) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search Icon",
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                singleLine = true,
                 shape = RoundedCornerShape(50),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color.Gray,
+                    focusedBorderColor = maroonPrimary,
                     unfocusedBorderColor = Color.LightGray,
-                )
+                ),
+                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -125,17 +170,17 @@ fun MonitoredAppCard(navController: NavController) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
-                imageVector = Icons.Default.ShoppingCart, // Placeholder for Shopee logo
+                painter = painterResource(id = R.drawable.shopee_logo),
                 contentDescription = "Shopee Logo",
                 modifier = Modifier
                     .size(80.dp)
-                    .padding(start = 8.dp)
+                    .padding(start = 8.dp),
+                contentScale = ContentScale.Fit
             )
 
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 8.dp)
+                    .padding(start = 8.dp, end = 12.dp)
             ) {
                 Text(
                     text = "Shopee",
@@ -150,13 +195,15 @@ fun MonitoredAppCard(navController: NavController) {
                 )
             }
 
+            Spacer(Modifier.weight(1f))
+
             Column(
                 modifier = Modifier.padding(end = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 DonutChart(
-                    modifier = Modifier.size(width = 140.dp, height = 80.dp),
+                    modifier = Modifier.size(width = 140.dp, height = 70.dp),
                     positivePercent = 70f,
                     negativePercent = 30f,
                     totalReviews = 1200
@@ -165,6 +212,7 @@ fun MonitoredAppCard(navController: NavController) {
                     onClick = { navController.navigate(Screen.FullAnalysis.route) },
                     modifier = Modifier
                         .height(32.dp)
+                        .width(140.dp)
                         .padding(top = 4.dp),
                     shape = RoundedCornerShape(50),
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -229,6 +277,5 @@ fun RecommendationAppItem(icon: ImageVector, appName: String, rating: String) {
 @Preview(showBackground = true)
 @Composable
 fun DashboardScreenPreview() {
-    // Preview doesn't have a NavController, so we can't show the full screen.
-    // We can either pass a fake NavController or show a simplified version of the screen.
+    DashboardScreen(navController = rememberNavController())
 }
