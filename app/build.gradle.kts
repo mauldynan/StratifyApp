@@ -54,9 +54,6 @@ android {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
-    aaptOptions {
-        noCompress += ".tflite"
-    }
 }
 
 // percobaan siapa tau bisa ygy
@@ -118,7 +115,6 @@ dependencies {
     implementation("com.squareup.picasso:picasso:2.71828")
     implementation("com.squareup.okhttp3:okhttp:5.2.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("org.tensorflow:tensorflow-lite-task-text:0.4.3")
 
     // --- Other AndroidX Libraries ---
     implementation("androidx.slice:slice-builders:1.0.0")
@@ -133,3 +129,4 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
