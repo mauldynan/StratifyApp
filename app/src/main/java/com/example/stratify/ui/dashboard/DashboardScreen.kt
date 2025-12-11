@@ -102,8 +102,9 @@ fun DashboardScreen(navController: NavController) {
                 onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(40.dp),
-                placeholder = { Text("Search", color = Color(0xFFB0B0B0)) },
+                    .defaultMinSize(minHeight = 56.dp),
+
+                        placeholder = { Text("Search", color = Color(0xFFB0B0B0)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
