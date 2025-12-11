@@ -8,15 +8,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -30,6 +30,9 @@ import androidx.navigation.compose.rememberNavController
 import com.example.stratify.DonutChart
 import com.example.stratify.R
 import com.example.stratify.Screen
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Icon
+
 
 // --- Colors ---
 private val maroonPrimary = Color(0xFF800000)
@@ -81,7 +84,7 @@ fun DashboardScreen(navController: NavController) {
                 .padding(16.dp)
         ) {
             // Title for the screen section
-            val searchQuery = remember { mutableStateOf("") }
+            var searchQuery by remember { mutableStateOf("") }
             Text(
                 text = "Analysis Apps",
                 fontSize = 20.sp,
@@ -95,8 +98,8 @@ fun DashboardScreen(navController: NavController) {
 
             // Search Bar
             OutlinedTextField(
-                value = searchQuery.value,
-                onValueChange = { searchQuery.value = it },
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(40.dp),
@@ -136,10 +139,21 @@ fun DashboardScreen(navController: NavController) {
             // Recommendation Apps Section
             SectionHeader("Recommendation Apps")
             Spacer(modifier = Modifier.height(8.dp))
-            RecommendationAppItem(
-                icon = Icons.Default.Star,
-                appName = "Blibli",
-                rating = "4.8 / 5 Bintang"
+
+            RecommendationAppItemCard(
+                painter = painterResource(id = R.drawable.zalora_logo),
+                appName = "Zalora",
+                rating = "4.8 / 5 Bintang",
+                sales = "2.3M Terjual",
+                onClick = { /* navigasi ke detail Zalora */ }
+            )
+
+            RecommendationAppItemCard(
+                painter = painterResource(id = R.drawable.tokopedia_logo),
+                appName = "Tokopedia",
+                rating = "4.6 / 5 Bintang",
+                sales = "3.5M Terjual",
+                onClick = { /* navigasi ke detail Tokopedia */ }
             )
         }
     }
@@ -231,46 +245,75 @@ fun RecentlyViewedApps() {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Placeholders for recently viewed app logos
-        AppIcon(icon = Icons.Default.Favorite)
-        AppIcon(icon = Icons.Default.ShoppingCart)
-        AppIcon(icon = Icons.Default.Star)
-        AppIcon(icon = Icons.Default.Place)
+        AppIcon(painter = painterResource(id = R.drawable.lazada_logo))
+        AppIcon(painter = painterResource(id = R.drawable.tokopedia_logo))
+        AppIcon(painter = painterResource(id = R.drawable.amazon_logo))
+        AppIcon(painter = painterResource(id = R.drawable.bukalapak_logo))
     }
 }
 
 @Composable
-fun AppIcon(icon: ImageVector) {
-    Image(
-        imageVector = icon,
-        contentDescription = null,
-        modifier = Modifier
-            .size(48.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.LightGray)
-            .padding(8.dp)
-    )
+fun AppIcon(icon: ImageVector? = null, painter: Painter? = null, modifier: Modifier = Modifier) {
+    if (painter != null) {
+        Image(
+            painter = painter,
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.LightGray)
+                .padding(8.dp)
+        )
+    } else if (icon != null) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.LightGray)
+                .padding(8.dp)
+        )
+    }
 }
 
 @Composable
-fun RecommendationAppItem(icon: ImageVector, appName: String, rating: String) {
-    Row(
+fun RecommendationAppItemCard(
+    painter: Painter,
+    appName: String,
+    rating: String,
+    sales: String,
+    onClick: () -> Unit = {}
+) {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 6.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F9F9))
     ) {
-        AppIcon(icon = icon)
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = appName, fontWeight = FontWeight.Bold, color = Color.Black)
-            Text(text = rating, color = Color.Gray, fontSize = 12.sp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AppIcon(painter = painter)
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = appName, fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(text = rating, color = Color.Gray, fontSize = 12.sp)
+                Text(text = sales, color = Color.Gray, fontSize = 12.sp)
+            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Go to details",
+                tint = Color.Gray
+            )
         }
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = "Go to details",
-            tint = Color.Gray
-        )
     }
 }
 

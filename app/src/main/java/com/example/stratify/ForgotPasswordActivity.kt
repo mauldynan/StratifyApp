@@ -5,29 +5,23 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 
 class ForgotPasswordActivity : AppCompatActivity() {
@@ -40,7 +34,7 @@ class ForgotPasswordActivity : AppCompatActivity() {
         mAuth = FirebaseAuth.getInstance()
 
         setContent {
-            ForgotPasswordContent(
+            ForgotPasswordScreen(
                 onSendClicked = { email ->
                     if (email.isNotBlank()) {
                         sendPasswordReset(email)
@@ -49,9 +43,7 @@ class ForgotPasswordActivity : AppCompatActivity() {
                     }
                 },
                 onBackClicked = {
-                    // Navigate back to LoginActivity
-                    val intent = Intent(this, LoginActivity::class.java)
-                    startActivity(intent)
+                    startActivity(Intent(this, LoginActivity::class.java))
                     finish()
                 }
             )
@@ -61,10 +53,9 @@ class ForgotPasswordActivity : AppCompatActivity() {
     private fun sendPasswordReset(email: String) {
         mAuth.sendPasswordResetEmail(email)
             .addOnCompleteListener {
-                // This toast is shown regardless of success to prevent email enumeration attacks
                 Toast.makeText(
                     this,
-                    "If this email is registered, a password reset link has been sent. Please check your inbox and spam folder.",
+                    "If this email is registered, a reset link has been sent. Check inbox/spam.",
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -73,49 +64,127 @@ class ForgotPasswordActivity : AppCompatActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForgotPasswordContent(
+fun ForgotPasswordScreen(
     onSendClicked: (String) -> Unit,
     onBackClicked: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Forgot Password") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClicked) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email Address") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            Button(
-                onClick = { onSendClicked(email) },
+    val glowColor = Color(0xFFFFE57F)
+
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize()) {
+
+            // TOP glow
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp)
+                    .size(600.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 200.dp, y = (-200).dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(glowColor.copy(alpha = 0.5f), Color.Transparent),
+                            radius = 1000f
+                        )
+                    )
+            )
+
+            // BOTTOM glow
+            Box(
+                modifier = Modifier
+                    .size(600.dp)
+                    .align(Alignment.BottomStart)
+                    .offset(x = (-200).dp, y = 200.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(glowColor.copy(alpha = 0.5f), Color.Transparent),
+                            radius = 1000f
+                        )
+                    )
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Send Reset Email")
+
+                // Back Arrow
+                IconButton(
+                    onClick = onBackClicked,
+                    modifier = Modifier
+                        .align(Alignment.Start)
+                        .padding(top = 40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.Black
+                    )
+                }
+
+                Image(
+                    painter = painterResource(id = R.drawable.logo_stratify2),
+                    contentDescription = "App Logo",
+                    contentScale = ContentScale.FillWidth, // tetap proporsional
+                    modifier = Modifier
+                        .padding(top = 64.dp)
+                        .fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Text(
+                    text = "Forgot Password",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colorResource(id = R.color.app_yellow),
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                )
+
+                Text(
+                    text = "Provide your accounts email for which you want to reset your password!",
+                    color = Color.Gray,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                // Email field
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colorResource(id = R.color.app_yellow),
+                        unfocusedBorderColor = Color.Gray
+                    )
+                )
+
+                Spacer(Modifier.height(32.dp))
+
+                // SEND button
+                Button(
+                    onClick = { onSendClicked(email) },
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colorResource(id = R.color.app_yellow)
+                    )
+                ) {
+                    Text(
+                        text = "RESET PASSWORD",
+                        color = Color.White,
+                        fontSize = 16.sp
+                    )
+                }
             }
         }
     }

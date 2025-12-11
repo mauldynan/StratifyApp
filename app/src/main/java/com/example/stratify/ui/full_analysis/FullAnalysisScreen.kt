@@ -1,44 +1,48 @@
 package com.example.stratify.ui.full_analysis
 
-import android.graphics.Color as AndroidColor // Alias to avoid conflict with Compose Color
-import androidx.compose.foundation.Image
+import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.stratify.DonutChart
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
+import com.example.stratify.R
+
+
 
 // --- Colors ---
-private val maroonPrimary = Color(0xFF800000)
-private val textYellow = Color(0xFFFFEB3B)
+private val maroonPrimary = Color(0xFF760000)
+private val textYellow = Color(0xFFF6C761)
 private val backgroundLight = Color(0xFFF0F0F0)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FullAnalysisScreen(onBackPressed: () -> Unit) {
+fun FullAnalysisScreen(navController: NavController, onBackPressed: () -> Unit) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -52,11 +56,7 @@ fun FullAnalysisScreen(onBackPressed: () -> Unit) {
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back",
-                            tint = textYellow
-                        )
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = textYellow)
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -73,7 +73,7 @@ fun FullAnalysisScreen(onBackPressed: () -> Unit) {
                 .background(backgroundLight)
                 .padding(16.dp)
         ) {
-            AppSummaryCard()
+            AppSummaryCard(navController)
             Spacer(modifier = Modifier.height(20.dp))
             SentimentAnalysisChart()
             Spacer(modifier = Modifier.height(16.dp))
@@ -87,39 +87,56 @@ fun FullAnalysisScreen(onBackPressed: () -> Unit) {
 }
 
 @Composable
-fun AppSummaryCard() {
+fun AppSummaryCard(navController: NavController) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Shopee Logo
             Image(
-                imageVector = Icons.Default.Store,
-                contentDescription = "App Logo",
-                modifier = Modifier.size(50.dp)
+                painter = painterResource(id = R.drawable.shopee_logo),
+                contentDescription = "Shopee Logo",
+                modifier = Modifier.size(70.dp)
             )
+
             Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
                 Text("Shopee", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Text("4.6/5 Bintang", color = Color.Gray, fontSize = 12.sp)
             }
-            // Placeholder for Donut Chart
+
+            // DonutChart
             Box(
                 modifier = Modifier
-                    .size(width = 100.dp, height = 40.dp)
-                    .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(4.dp)),
+                    .size(140.dp) // ukuran besar sesuai keinginan
+                    .alignBy { 70 } // pastikan rata vertikal dengan logo (70 = tinggi logo)
+                    .clickable { navController.navigate("full_analysis_detail") },
                 contentAlignment = Alignment.Center
             ) {
-                Text("Chart Area", fontSize = 10.sp, color = Color.DarkGray)
+                DonutChart(
+                    positivePercent = 70f,
+                    negativePercent = 30f,
+                    totalReviews = 1200,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
+
     }
 }
+
 
 @Composable
 fun SentimentAnalysisChart() {
@@ -129,11 +146,10 @@ fun SentimentAnalysisChart() {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(250.dp), // Increased height slightly for better visibility
+                .height(250.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            // Using AndroidView to wrap the MPAndroidChart XML-based view
             AndroidView(
                 factory = { context ->
                     LineChart(context).apply {
@@ -142,7 +158,6 @@ fun SentimentAnalysisChart() {
                         xAxis.position = XAxis.XAxisPosition.BOTTOM
                         axisRight.isEnabled = false
 
-                        // Setup Dummy Data so the chart isn't empty
                         val entries = listOf(
                             Entry(1f, 3f),
                             Entry(2f, 4f),
@@ -157,7 +172,7 @@ fun SentimentAnalysisChart() {
                             setDrawCircles(true)
                         }
                         this.data = LineData(dataSet)
-                        this.invalidate() // Refresh chart
+                        this.invalidate()
                     }
                 },
                 modifier = Modifier
@@ -175,7 +190,7 @@ fun DominantKeywordsSection() {
             "Dominant Keywords",
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black,
+            color = maroonPrimary,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
@@ -186,23 +201,14 @@ fun DominantKeywordsSection() {
         ) {
             KeywordCard(
                 title = "Positif",
-                // Using trimMargin for cleaner code formatting
-                keywords = """
-                    • Good promo
-                    • Free shipping
-                    • Nice app
-                """.trimIndent(),
+                keywords = listOf("Good promo", "Free shipping", "Nice app"),
                 color = Color(0xFF2E7D32),
                 backgroundColor = Color(0xFFE8F5E9),
                 modifier = Modifier.weight(1f)
             )
             KeywordCard(
                 title = "Negatif",
-                keywords = """
-                    • Bug
-                    • Lambat
-                    • Sulit digunakan
-                """.trimIndent(),
+                keywords = listOf("Bug", "Lambat", "Sulit digunakan"),
                 color = Color(0xFFD32F2F),
                 backgroundColor = Color(0xFFFFEBEE),
                 modifier = Modifier.weight(1f)
@@ -212,7 +218,7 @@ fun DominantKeywordsSection() {
 }
 
 @Composable
-fun KeywordCard(title: String, keywords: String, color: Color, backgroundColor: Color, modifier: Modifier = Modifier) {
+fun KeywordCard(title: String, keywords: List<String>, color: Color, backgroundColor: Color, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
@@ -220,25 +226,16 @@ fun KeywordCard(title: String, keywords: String, color: Color, backgroundColor: 
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                color = color
-            )
-            HorizontalDivider(
-                modifier = Modifier
-                    .width(30.dp)
-                    .padding(vertical = 6.dp),
-                thickness = 2.dp,
-                color = color
-            )
-            Text(
-                text = keywords,
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-                color = Color.Black
-            )
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = color)
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(modifier = Modifier
+                .width(30.dp)
+                .height(2.dp)
+                .background(color))
+            Spacer(modifier = Modifier.height(8.dp))
+            keywords.forEach { keyword ->
+                Text("• $keyword", fontSize = 13.sp, lineHeight = 18.sp, color = Color.Black)
+            }
         }
     }
 }
@@ -249,8 +246,6 @@ fun ReviewFilterButtons() {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Created a helper wrapper or just repeat usage.
-        // Note: 10.sp is very small, bumped to 11.sp
         FilterButton("Latest", Modifier.weight(1f))
         FilterButton("Positive", Modifier.weight(1f))
         FilterButton("Negative", Modifier.weight(1f))
@@ -261,10 +256,9 @@ fun ReviewFilterButtons() {
 fun FilterButton(text: String, modifier: Modifier = Modifier) {
     Button(
         onClick = { },
-        modifier = modifier,
+        modifier = modifier.height(35.dp),
         colors = ButtonDefaults.buttonColors(containerColor = maroonPrimary),
-        shape = RoundedCornerShape(8.dp),
-        contentPadding = PaddingValues(vertical = 8.dp) // Reduce height slightly
+        shape = RoundedCornerShape(8.dp)
     ) {
         Text(text, fontSize = 11.sp, color = textYellow)
     }
@@ -280,7 +274,7 @@ fun ReviewsSection() {
             date = "12 Jan 2024",
             reviewText = "The app makes work very easy",
             rating = 5,
-            icon = Icons.Default.Person
+            initials = "B"
         )
         Spacer(modifier = Modifier.height(8.dp))
         ReviewCard(
@@ -288,28 +282,28 @@ fun ReviewsSection() {
             date = "10 Jan 2024",
             reviewText = "The app is interesting, lots of great features!",
             rating = 1,
-            icon = Icons.Default.Person
+            initials = "S"
         )
     }
 }
 
 @Composable
-fun ReviewCard(author: String, date: String, reviewText: String, rating: Int, icon: ImageVector) {
+fun ReviewCard(author: String, date: String, reviewText: String, rating: Int, initials: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.Top) {
-            Image(
-                imageVector = icon,
-                contentDescription = "User Avatar",
+            Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.LightGray) // Add background to avatar placeholder
-                    .padding(4.dp)
-            )
+                    .background(Color.Gray),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(initials, color = Color.White, fontWeight = FontWeight.Bold)
+            }
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text("$author - $date", fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -318,7 +312,6 @@ fun ReviewCard(author: String, date: String, reviewText: String, rating: Int, ic
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     repeat(5) { index ->
-                        // Logic to color stars based on rating
                         val starColor = if (index < rating) maroonPrimary else Color.LightGray
                         Icon(
                             imageVector = Icons.Default.Star,

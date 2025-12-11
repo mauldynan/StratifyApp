@@ -66,7 +66,10 @@ fun AppNavigation(viewModel: SharedViewModel) {
             }
 
             composable(Screen.FullAnalysis.route) {
-                FullAnalysisScreen(onBackPressed = { navController.popBackStack() })
+                FullAnalysisScreen(
+                    navController = navController,
+                    onBackPressed = { navController.popBackStack() }
+                )
             }
 
             composable(Screen.Scrum.route) {
