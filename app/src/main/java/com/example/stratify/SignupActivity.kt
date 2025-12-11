@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
@@ -95,31 +96,23 @@ fun SignupScreen(
         Box(Modifier.fillMaxSize()) {
 
             // TOP glow
-            Box(
+            Image(
+                painter = painterResource(id = R.drawable.elips),
+                contentDescription = null,
                 modifier = Modifier
                     .size(600.dp)
                     .align(Alignment.TopEnd)
-                    .offset(x = 200.dp, y = (-200).dp)
-                    .background(
-                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
-                            colors = listOf(glowColor.copy(alpha = 0.5f), Color.Transparent),
-                            radius = 1000f
-                        )
-                    )
+                    .offset(x = 200.dp, y = (-250).dp)
             )
 
             // BOTTOM glow
-            Box(
+            Image(
+                painter = painterResource(id = R.drawable.elips),
+                contentDescription = null,
                 modifier = Modifier
                     .size(600.dp)
                     .align(Alignment.BottomStart)
-                    .offset(x = (-200).dp, y = 200.dp)
-                    .background(
-                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
-                            colors = listOf(glowColor.copy(alpha = 0.5f), Color.Transparent),
-                            radius = 1000f
-                        )
-                    )
+                    .offset(x = (-200).dp, y = 250.dp)
             )
 
             Column(
@@ -285,4 +278,13 @@ fun SignupScreen(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SignupScreenPreview() {
+    SignupScreen(
+        onSignupClicked = { _, _, _, _ -> },
+        onSignInClicked = {}
+    )
 }

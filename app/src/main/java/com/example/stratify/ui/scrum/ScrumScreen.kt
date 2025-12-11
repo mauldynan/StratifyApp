@@ -11,8 +11,11 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.stratify.ui.theme.StratifyTheme
 
 // --- Colors ---
 private val maroonPrimary = Color(0xFF760000)
@@ -35,11 +38,7 @@ data class Task(
 )
 
 fun getSampleTasks(): SnapshotStateList<Task> {
-    return mutableStateListOf(
-        Task(1, "Design new application logo", "2024-12-01", "UI/UX Design", TaskStatus.IN_PROGRESS),
-        Task(2, "Develop REST API for user profiles", "2024-11-20", "Backend Development", TaskStatus.TODO),
-        Task(3, "Fix authentication bug on Android", "2024-11-15", "Mobile App Team", TaskStatus.DONE)
-    )
+    return mutableStateListOf()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -201,5 +200,13 @@ private fun InfoRow(label: String, value: String) {
     Row {
         Text(label, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.width(100.dp))
         Text(value)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ScrumScreenPreview() {
+    StratifyTheme {
+        ScrumScreen()
     }
 }

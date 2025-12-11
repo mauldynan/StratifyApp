@@ -54,6 +54,9 @@ android {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
+    aaptOptions {
+        noCompress("tflite")
+    }
 }
 
 // percobaan siapa tau bisa ygy
@@ -119,6 +122,9 @@ dependencies {
     // --- Other AndroidX Libraries ---
     implementation("androidx.slice:slice-builders:1.0.0")
     implementation("androidx.work:work-runtime-ktx:2.11.0")
+
+    // --- TensorFlow Lite ---
+    implementation("org.tensorflow:tensorflow-lite-task-text:0.4.0")
 
     // --- Testing ---
     testImplementation(libs.junit)

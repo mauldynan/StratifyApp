@@ -26,11 +26,14 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.Fragment
 import androidx.navigation.findNavController
+import com.example.stratify.ui.theme.MaroonPrimary
+import com.example.stratify.ui.theme.StratifyTheme
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.components.XAxis
@@ -47,7 +50,7 @@ class FullAnalysisFragment : Fragment() {
         // Kita menggunakan ComposeView sebagai root view, menggantikan XML inflater
         return ComposeView(requireContext()).apply {
             setContent {
-                MaterialTheme {
+                StratifyTheme {
                     // Panggil fungsi Composable utama di sini
                     FullAnalysisScreen(
                         onBackClick = { findNavController().popBackStack() }
@@ -71,7 +74,8 @@ fun FullAnalysisScreen(onBackClick: () -> Unit) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = MaroonPrimary,
+                    navigationIconContentColor = colorResource(id = R.color.app_yellow)
                 )
             )
         }
@@ -322,4 +326,12 @@ fun updateLineChartData(lineChart: LineChart) {
 
     lineChart.data = LineData(positiveSet, negativeSet)
     lineChart.invalidate()
+}
+
+@Preview(showBackground = true)
+@Composable
+fun FullAnalysisScreenPreview() {
+    StratifyTheme {
+        FullAnalysisScreen(onBackClick = {})
+    }
 }

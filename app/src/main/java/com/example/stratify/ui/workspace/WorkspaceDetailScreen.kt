@@ -14,20 +14,36 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.stratify.Workspace
+import com.example.stratify.ui.theme.MaroonPrimary
 import com.example.stratify.view.profile.SharedViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkspaceDetailScreen(
     viewModel: SharedViewModel,
     workspaceId: String?,
     onBackPressed: () -> Unit
 ) {
-    val workspace = viewModel.workspaces.find { it.code == workspaceId }
+    val workspace by viewModel.getWorkspaceById(workspaceId ?: "").observeAsState()
 
+    WorkspaceDetailContent(
+        workspace = workspace,
+        onBackPressed = onBackPressed
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WorkspaceDetailContent(
+    workspace: Workspace?,
+    onBackPressed: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -46,10 +62,21 @@ fun WorkspaceDetailScreen(
         }
     ) { paddingValues ->
         Box(
-            modifier = Modifier.fillMaxSize().padding(paddingValues),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
             contentAlignment = Alignment.Center
         ) {
             Text("Workspace details for ${workspace?.name ?: "..."} go here.")
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun WorkspaceDetailScreenPreview() {
+    WorkspaceDetailContent(
+        workspace = Workspace(name = "Sample Workspace"),
+        onBackPressed = {}
+    )
 }
