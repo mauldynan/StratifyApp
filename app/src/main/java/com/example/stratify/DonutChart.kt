@@ -9,9 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,7 +24,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -54,16 +52,18 @@ fun DonutChart(
     val positiveColor = Color(0xFF4CAF50)
     val negativeColor = Color(0xFFF44336)
     val backgroundColor = Color(0xFFE0E0E0)
-    val strokeWidth = 12.dp // Sedikit diperkecil biar rapi
+    val strokeWidth = 10.dp // Lebih tipis agar proporsional
 
     Row(
-        modifier = modifier, // Menggunakan modifier dari parent (agar posisi fleksibel)
+        modifier = modifier.fillMaxSize(), // gunakan full width dari modifier agar alignment bekerja
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
+        horizontalArrangement = Arrangement.Start // geser donut ke kiri
     ) {
         // --- BAGIAN LINGKARAN CHART ---
         Box(
-            modifier = Modifier.size(90.dp), // Ukuran fixed disesuaikan dengan layout Card
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -114,45 +114,36 @@ fun DonutChart(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = totalReviews.toString(),
-                    fontSize = 14.sp, // Font size disesuaikan agar muat
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                    color = Color.Black,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
                 Text(
-                    text = "Reviews",
+                    text = "Total Review",
                     fontSize = 8.sp,
-                    color = Color.Gray
+                    color = Color.Gray,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
         }
-
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
         // --- BAGIAN LEGENDA (Teks Samping) ---
         Column {
             Text(
-                text = "${positivePercent.toInt()}% Pos",
+                text = "${positivePercent.toInt()}% Positive",
                 color = positiveColor,
-                fontSize = 12.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "${negativePercent.toInt()}% Neg",
+                text = "${negativePercent.toInt()}% Negative",
                 color = negativeColor,
-                fontSize = 12.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun DonutChartPreview() {
-    DonutChart(
-        positivePercent = 70f,
-        negativePercent = 30f,
-        totalReviews = 1200
-    )
 }

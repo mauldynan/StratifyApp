@@ -41,6 +41,8 @@ import com.example.stratify.SignupActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import androidx.compose.ui.res.colorResource
+
 
 class LoginActivity : ComponentActivity() {
 
@@ -175,13 +177,15 @@ fun LoginScreen(
                 Image(
                     painter = painterResource(id = R.drawable.logo_stratify2),
                     contentDescription = "App Logo",
+                    contentScale = ContentScale.FillWidth, // tetap proporsional
                     modifier = Modifier
                         .padding(top = 64.dp)
-                        .height(100.dp)
+                        .fillMaxWidth()
                 )
-
+    
                 Text(
-                    text = "Login",
+                    text = "Welcome back",
+                    color = colorResource(id = R.color.app_yellow),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
@@ -190,7 +194,7 @@ fun LoginScreen(
                 )
 
                 Text(
-                    text = "Access your account",
+                    text = "Please enter your details to sign in.",
                     color = Color.Gray,
                     modifier = Modifier
                         .align(Alignment.Start)
@@ -209,7 +213,13 @@ fun LoginScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    isError = errorMessage != null
+                    isError = errorMessage != null,
+
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colorResource(id = R.color.app_yellow),
+                        unfocusedBorderColor = Color.Gray,
+                        errorBorderColor = Color.Red
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -232,7 +242,13 @@ fun LoginScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    isError = errorMessage != null
+                    isError = errorMessage != null,
+
+                    colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colorResource(id = R.color.app_yellow),
+                    unfocusedBorderColor = Color.Gray,
+                    errorBorderColor = Color.Red
+                )
                 )
 
                 // Forgot Password Text
@@ -258,18 +274,21 @@ fun LoginScreen(
                 Button(
                     onClick = { onLoginClicked(email, password) },
                     shape = RoundedCornerShape(24.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colorResource(id = R.color.app_yellow)
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 24.dp)
                         .height(50.dp)
                 ) {
-                    Text("Login", fontSize = 16.sp)
+                    Text("Sign In", fontSize = 16.sp, color = Color.White )
                 }
 
                 Text(
-                    text = "OR",
+                    text = "Or sign in with",
                     modifier = Modifier.padding(vertical = 24.dp),
-                    color = Color.Gray
+                    color = Color.Black
                 )
 
                 // Google Sign-In Button
@@ -287,7 +306,7 @@ fun LoginScreen(
                             modifier = androidx . compose . ui . Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text("Continue with Google", color = Color.Black)
+                        Text("SIGN IN WITH GOOGLE", color = Color.Black)
                     }
                 }
 
@@ -301,7 +320,8 @@ fun LoginScreen(
                     Text("Don't have an account?")
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Sign Up",
+                        text = "SIGN UP",
+                        color = colorResource(id = R.color.app_red),
                         fontWeight = FontWeight.Bold,
                     )
                 }

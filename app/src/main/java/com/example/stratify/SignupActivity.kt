@@ -3,25 +3,39 @@ package com.example.stratify
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import java.util.regex.Pattern
 
-class SignupActivity : AppCompatActivity() {
+class SignupActivity : ComponentActivity() {
 
     private lateinit var auth: FirebaseAuth
 
@@ -31,18 +45,25 @@ class SignupActivity : AppCompatActivity() {
 
         setContent {
             SignupScreen(
-                onSignupClicked = { email, password ->
-                    auth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(this) { task ->
-                        if (task.isSuccessful) {
-                            Toast.makeText(this, "Account created successfully!", Toast.LENGTH_SHORT).show()
-                            startActivity(Intent(this, LoginActivity::class.java))
-                            finish()
-                        } else {
-                            Toast.makeText(this, "Sign up failed: ${task.exception?.localizedMessage}", Toast.LENGTH_SHORT).show()
+                onSignupClicked = { email, password, confirmPassword, formError ->
+                    if (formError != null) return@SignupScreen
+
+                    auth.createUserWithEmailAndPassword(email, password)
+                        .addOnCompleteListener(this) { task ->
+                            if (task.isSuccessful) {
+                                Toast.makeText(this, "Account created successfully!", Toast.LENGTH_SHORT).show()
+                                startActivity(Intent(this, LoginActivity::class.java))
+                                finish()
+                            } else {
+                                Toast.makeText(
+                                    this,
+                                    "Sign up failed: ${task.exception?.localizedMessage}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
-                    }
                 },
-                onSigninClicked = {
+                onSignInClicked = {
                     startActivity(Intent(this, LoginActivity::class.java))
                     finish()
                 }
@@ -50,125 +71,218 @@ class SignupActivity : AppCompatActivity() {
         }
     }
 }
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignupScreen(
-    onSignupClicked: (String, String) -> Unit,
-    onSigninClicked: () -> Unit
+    onSignupClicked: (String, String, String, String?) -> Unit,
+    onSignInClicked: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var passwordValidationResult by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
+    var formError by remember { mutableStateOf<String?>(null) }
 
-    val passwordPattern = remember {
-        Pattern.compile("""^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$""")    }
+    val passwordPattern = Pattern.compile(
+        """^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"""
+    )
 
-    // Real-time password validation
-    LaunchedEffect(password) {
-        if (password.isEmpty()) {
-            passwordValidationResult = null
-            return@LaunchedEffect
-        }
-        val isValid = passwordPattern.matcher(password).matches()
-        passwordValidationResult = if (isValid) {
-            Pair(true, "Password is valid!")
-        } else {
-            Pair(false, "Password must be at least 8 characters long, contain a lowercase, uppercase, number, and symbol (@, $, !, %, *, ?, & only).")
-        }
-    }
+    // Glow soft color
+    val glowColor = Color(0xFFFFE57F)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Sign Up", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(32.dp))
+    Surface(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize()) {
 
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        Spacer(Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation(),
-            singleLine = true
-        )
-        passwordValidationResult?.let { (isValid, message) ->
-            Text(
-                text = message,
-                color = if (isValid) Color.Green else Color.Red,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            // TOP glow
+            Box(
+                modifier = Modifier
+                    .size(600.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 200.dp, y = (-200).dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(glowColor.copy(alpha = 0.5f), Color.Transparent),
+                            radius = 1000f
+                        )
+                    )
             )
-        }
-        Spacer(Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = confirmPassword,
-            onValueChange = { confirmPassword = it },
-            label = { Text("Confirm Password") },
-            modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation(),
-            singleLine = true
-        )
-        Spacer(Modifier.height(24.dp))
-
-        var formError by remember { mutableStateOf<String?>(null) }
-        Button(
-            onClick = {
-                formError = when {
-                    email.isBlank() || password.isBlank() || confirmPassword.isBlank() -> "Please fill in all fields."
-                    password != confirmPassword -> "Passwords do not match."
-                    passwordValidationResult?.first == false -> "Password is not strong enough."
-                    else -> null
-                }
-                if (formError == null) {
-                    onSignupClicked(email, password)
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Sign Up")
-        }
-
-        formError?.let {
-            Text(
-                text = it,
-                color = Color.Red,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 8.dp)
+            // BOTTOM glow
+            Box(
+                modifier = Modifier
+                    .size(600.dp)
+                    .align(Alignment.BottomStart)
+                    .offset(x = (-200).dp, y = 200.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(glowColor.copy(alpha = 0.5f), Color.Transparent),
+                            radius = 1000f
+                        )
+                    )
             )
-        }
 
-        Spacer(Modifier.height(16.dp))
-        val annotatedString = buildAnnotatedString {
-            append("Already have an account? ")
-            pushStringAnnotation(tag = "SIGNIN", annotation = "signin")
-            withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                append("Sign In")
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                Image(
+                    painter = painterResource(id = R.drawable.logo_stratify2),
+                    contentDescription = "App Logo",
+                    contentScale = ContentScale.FillWidth, // tetap proporsional
+                    modifier = Modifier
+                        .padding(top = 64.dp)
+                        .fillMaxWidth()
+                )
+
+                Text(
+                    "Sign Up",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colorResource(id = R.color.app_yellow),
+                    modifier = Modifier.align(Alignment.Start).padding(top = 24.dp)
+                )
+
+                Text(
+                    "Let's create your account!",
+                    color = Color.Gray,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                // EMAIL
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it; formError = null },
+                    label = { Text("Email") },
+                    leadingIcon = { Icon(Icons.Default.Email, null) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colorResource(id = R.color.app_yellow),
+                        unfocusedBorderColor = Color.Gray,
+                        errorBorderColor = Color.Red
+                    )
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                // PASSWORD
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it; formError = null },
+                    label = { Text("Password") },
+                    leadingIcon = { Icon(Icons.Default.Lock, null) },
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = null
+                            )
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colorResource(id = R.color.app_yellow),
+                        unfocusedBorderColor = Color.Gray,
+                        errorBorderColor = Color.Red
+                    )
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                // CONFIRM PASSWORD
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it; formError = null },
+                    label = { Text("Confirm Password") },
+                    leadingIcon = { Icon(Icons.Default.Lock, null) },
+                    visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                            Icon(
+                                imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = null
+                            )
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colorResource(id = R.color.app_yellow),
+                        unfocusedBorderColor = Color.Gray,
+                        errorBorderColor = Color.Red
+                    )
+                )
+
+                // VALIDATION
+                if (formError != null) {
+                    Text(
+                        text = formError!!,
+                        color = Color.Red,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // SIGN UP BUTTON
+                Button(
+                    onClick = {
+                        formError = when {
+                            email.isBlank() || password.isBlank() || confirmPassword.isBlank() ->
+                                "Please fill in all fields."
+                            password != confirmPassword ->
+                                "Passwords do not match."
+                            !passwordPattern.matcher(password).matches() ->
+                                "Password must contain uppercase, lowercase, number, symbol & min 8 chars."
+                            else -> null
+                        }
+
+                        onSignupClicked(email, password, confirmPassword, formError)
+                    },
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colorResource(id = R.color.app_yellow)
+                    )
+                ) {
+                    Text("Sign Up", color = Color.White, fontSize = 16.sp)
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // SIGN IN NAVIGATION
+                Row(
+                    modifier = Modifier.clickable { onSignInClicked() },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Already have an account?")
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "SIGN IN",
+                        color = colorResource(id = R.color.app_red),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(Modifier.height(40.dp))
             }
-            pop()
         }
-        ClickableText(
-            text = annotatedString,
-            onClick = { offset ->
-                annotatedString.getStringAnnotations(tag = "SIGNIN", start = offset, end = offset)
-                    .firstOrNull()?.let {
-                        onSigninClicked()
-                    }
-            }
-        )
     }
 }
