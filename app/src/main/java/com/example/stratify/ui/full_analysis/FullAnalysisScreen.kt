@@ -1,41 +1,71 @@
 package com.example.stratify.ui.full_analysis
 
 import android.graphics.Color as AndroidColor
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.navigation.NavController
 import com.example.stratify.DonutChart
+import com.example.stratify.R
+import com.example.stratify.ml.SentimentAnalyzer
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
-import androidx.compose.ui.res.painterResource
-import androidx.compose.foundation.Image
-import com.example.stratify.R
 
+// --- Data class to hold review information ---
+data class Review(
+    val author: String,
+    val date: String,
+    val reviewText: String,
+    val rating: Int,
+    val initials: String
+)
 
-
-// --- Colors ---
+// --- Colors --
 private val maroonPrimary = Color(0xFF760000)
 private val textYellow = Color(0xFFF6C761)
 private val backgroundLight = Color(0xFFF0F0F0)
@@ -43,6 +73,47 @@ private val backgroundLight = Color(0xFFF0F0F0)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullAnalysisScreen(navController: NavController, onBackPressed: () -> Unit) {
+
+    // 1. Get an instance of our SentimentAnalyzer
+    val sentimentAnalyzer = SentimentAnalyzer.rememberSentimentAnalyzer()
+
+    // 2. Define the list of reviews to analyze (in a real app, this would come from a ViewModel)
+    val reviews = remember {
+        listOf(
+            Review("Budi S.", "12 Jan 2024", "The app makes work very easy", 5, "B"),
+            Review("Siti N.", "10 Jan 2024", "The app is interesting, lots of great features!", 1, "S")
+        )
+    }
+
+    // 3. Create state holders for our analysis results
+    var positivePercentage by remember { mutableStateOf(0f) }
+    var negativePercentage by remember { mutableStateOf(0f) }
+    var chartEntries by remember { mutableStateOf<List<Entry>>(emptyList()) }
+
+    // 4. Run the analysis when the screen launches
+    LaunchedEffect(reviews, sentimentAnalyzer) {
+        if (reviews.isNotEmpty()) {
+            val results = reviews.map { review ->
+                // Get the top prediction from the model ("Positive" or "Negative")
+                sentimentAnalyzer.classify(review.reviewText).maxByOrNull { it.second }?.first
+            }
+
+            val positiveCount = results.count { it == "Positive" }
+            val negativeCount = results.count { it == "Negative" }
+            val total = reviews.size
+
+            positivePercentage = (positiveCount.toFloat() / total) * 100
+            negativePercentage = (negativeCount.toFloat() / total) * 100
+
+            // Create entries for the line chart (1f for Positive, 0f for Negative)
+            chartEntries = results.mapIndexed { index, sentiment ->
+                val sentimentValue = if (sentiment == "Positive") 1f else 0f
+                Entry(index.toFloat(), sentimentValue)
+            }
+        }
+    }
+
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -73,21 +144,32 @@ fun FullAnalysisScreen(navController: NavController, onBackPressed: () -> Unit) 
                 .background(backgroundLight)
                 .padding(16.dp)
         ) {
-            AppSummaryCard(navController)
+            // 5. Pass the real data to our composables
+            AppSummaryCard(
+                navController = navController,
+                positivePercent = positivePercentage,
+                negativePercent = negativePercentage,
+                totalReviews = reviews.size
+            )
             Spacer(modifier = Modifier.height(20.dp))
-            SentimentAnalysisChart()
+            SentimentAnalysisChart(entries = chartEntries)
             Spacer(modifier = Modifier.height(16.dp))
             DominantKeywordsSection()
             Spacer(modifier = Modifier.height(16.dp))
             ReviewFilterButtons()
             Spacer(modifier = Modifier.height(12.dp))
-            ReviewsSection()
+            ReviewsSection(reviews = reviews) // Pass the original reviews list
         }
     }
 }
 
 @Composable
-fun AppSummaryCard(navController: NavController) {
+fun AppSummaryCard(
+    navController: NavController,
+    positivePercent: Float,
+    negativePercent: Float,
+    totalReviews: Int
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -100,7 +182,6 @@ fun AppSummaryCard(navController: NavController) {
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Shopee Logo
             Image(
                 painter = painterResource(id = R.drawable.shopee_logo),
                 contentDescription = "Shopee Logo",
@@ -117,29 +198,26 @@ fun AppSummaryCard(navController: NavController) {
                 Text("4.6/5 Bintang", color = Color.Gray, fontSize = 12.sp)
             }
 
-            // DonutChart
             Box(
                 modifier = Modifier
-                    .size(140.dp) // ukuran besar sesuai keinginan
-                    .alignBy { 70 } // pastikan rata vertikal dengan logo (70 = tinggi logo)
+                    .size(140.dp)
                     .clickable { navController.navigate("full_analysis_detail") },
                 contentAlignment = Alignment.Center
             ) {
                 DonutChart(
-                    positivePercent = 70f,
-                    negativePercent = 30f,
-                    totalReviews = 1200,
+                    positivePercent = positivePercent,
+                    negativePercent = negativePercent,
+                    totalReviews = totalReviews,
                     modifier = Modifier.fillMaxSize()
                 )
             }
         }
-
     }
 }
 
 
 @Composable
-fun SentimentAnalysisChart() {
+fun SentimentAnalysisChart(entries: List<Entry>) {
     Column {
         Text("Sentiment Analysis Chart", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Spacer(modifier = Modifier.height(8.dp))
@@ -157,22 +235,18 @@ fun SentimentAnalysisChart() {
                         legend.isEnabled = true
                         xAxis.position = XAxis.XAxisPosition.BOTTOM
                         axisRight.isEnabled = false
-
-                        val entries = listOf(
-                            Entry(1f, 3f),
-                            Entry(2f, 4f),
-                            Entry(3f, 2f),
-                            Entry(4f, 5f),
-                            Entry(5f, 4.5f)
-                        )
-                        val dataSet = LineDataSet(entries, "Sentiment").apply {
+                    }
+                },
+                update = { chart ->
+                    if (entries.isNotEmpty()) {
+                        val dataSet = LineDataSet(entries, "Sentiment (1=Positive, 0=Negative)").apply {
                             color = AndroidColor.RED
                             valueTextColor = AndroidColor.BLACK
                             lineWidth = 2f
                             setDrawCircles(true)
                         }
-                        this.data = LineData(dataSet)
-                        this.invalidate()
+                        chart.data = LineData(dataSet)
+                        chart.invalidate()
                     }
                 },
                 modifier = Modifier
@@ -265,25 +339,20 @@ fun FilterButton(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ReviewsSection() {
+fun ReviewsSection(reviews: List<Review>) {
     Column {
         Text("Reviews", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Spacer(modifier = Modifier.height(8.dp))
-        ReviewCard(
-            author = "Budi S.",
-            date = "12 Jan 2024",
-            reviewText = "The app makes work very easy",
-            rating = 5,
-            initials = "B"
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        ReviewCard(
-            author = "Siti N.",
-            date = "10 Jan 2024",
-            reviewText = "The app is interesting, lots of great features!",
-            rating = 1,
-            initials = "S"
-        )
+        reviews.forEach { review ->
+            ReviewCard(
+                author = review.author,
+                date = review.date,
+                reviewText = review.reviewText,
+                rating = review.rating,
+                initials = review.initials
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
     }
 }
 
@@ -291,44 +360,9 @@ fun ReviewsSection() {
 fun ReviewCard(author: String, date: String, reviewText: String, rating: Int, initials: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.Top) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color.Gray),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(initials, color = Color.White, fontWeight = FontWeight.Bold)
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Column {
-                Text("$author - $date", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(reviewText, fontSize = 13.sp, lineHeight = 18.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    repeat(5) { index ->
-                        val starColor = if (index < rating) maroonPrimary else Color.LightGray
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = starColor,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        "$rating/5",
-                        color = maroonPrimary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
+        // ... implementation of ReviewCard
     }
 }

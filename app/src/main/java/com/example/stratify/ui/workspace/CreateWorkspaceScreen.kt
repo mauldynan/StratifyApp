@@ -45,14 +45,13 @@ fun CreateWorkspaceScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Create Workspace", fontWeight = FontWeight.Bold) },
+                title = { Text("Create Workspace") },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
                     titleContentColor = Color(0xFF800000),
                     navigationIconContentColor = Color(0xFF800000)
                 )
