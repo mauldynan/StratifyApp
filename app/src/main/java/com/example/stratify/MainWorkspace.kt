@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding // Import added
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api // Import added
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight // Optional: makes header text pop
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -96,22 +98,28 @@ private fun WorkspaceNavHost(
             ) {
                 Button(
                     onClick = { navController.navigate(WorkspaceScreen.CreateWorkspace.route) },
+                    modifier = Modifier
+                        .width(250.dp)
+                        .height(60.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = maroonPrimary,
                         contentColor = textYellow
                     )
                 ) {
-                    Text("Create Workspace")
+                    Text("Create Workspace", fontSize = 18.sp)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = { navController.navigate(WorkspaceScreen.JoinWorkspace.route) },
+                    modifier = Modifier
+                        .width(250.dp)
+                        .height(60.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = maroonPrimary,
                         contentColor = textYellow
                     )
                 ) {
-                    Text("Join Workspace")
+                    Text("Join Workspace", fontSize = 18.sp)
                 }
             }
         }
