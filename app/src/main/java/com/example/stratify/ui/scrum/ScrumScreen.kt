@@ -3,6 +3,7 @@ package com.example.stratify.ui.scrum
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -96,13 +97,28 @@ fun ScrumScreen(viewModel: ScrumViewModel = viewModel()) {
                 .padding(16.dp)
         ) {
             // Search Bar
-            TextField(
+            OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search ...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                singleLine = true
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 56.dp),
+
+                placeholder = { Text("Search", color = Color(0xFFB0B0B0)) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search Icon",
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(50),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = maroonPrimary,
+                    unfocusedBorderColor = Color.LightGray,
+                ),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
