@@ -48,11 +48,10 @@ fun ProfileOptionsScreen(
     var isAccountExpanded by remember { mutableStateOf(false) }
     var isLanguageExpanded by remember { mutableStateOf(false) }
 
-    // 🔥 backdrop gelap transparan (dashboard tetap kelihatan)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0x55000000)) // BACKDROP GELAP TRANSPARAN
+            .background(Color(0x55000000))
     ){
 
         // DRAWER KANAN
