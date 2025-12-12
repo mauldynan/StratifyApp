@@ -53,7 +53,6 @@ fun CreateWorkspaceScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
                     titleContentColor = Color(0xFF800000),
                     navigationIconContentColor = Color(0xFF800000)
                 )

@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import com.example.stratify.Workspace
 import com.example.stratify.view.profile.SharedViewModel
 
-// 1. Define the Maroon Color
 val MaroonPrimary = Color(0xFF800000)
 
 @Composable
@@ -51,7 +50,9 @@ fun WorkspaceListScreen(
 ) {
     WorkspaceListContent(
         workspaces = viewModel.workspaces,
-        onNavigateToWorkspaceDetail = onNavigateToWorkspaceDetail
+        onNavigateToWorkspaceDetail = onNavigateToWorkspaceDetail,
+        onNavigateToCreateWorkspace = onNavigateToCreateWorkspace,
+        onNavigateToJoinWorkspace = onNavigateToJoinWorkspace
     )
 }
 
@@ -59,27 +60,20 @@ fun WorkspaceListScreen(
 @Composable
 fun WorkspaceListContent(
     workspaces: List<Workspace>,
-    onNavigateToWorkspaceDetail: (workspaceId: String) -> Unit
+    onNavigateToWorkspaceDetail: (workspaceId: String) -> Unit,
+    onNavigateToCreateWorkspace: () -> Unit,
+    onNavigateToJoinWorkspace: () -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Workspaces", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    // 2. Apply Maroon to the Top Bar
-                    containerColor = MaroonPrimary,
-                    titleContentColor = Color.White
-                )
-            )
-        },
         floatingActionButton = {
             Box {
                 FloatingActionButton(
                     onClick = { showMenu = true },
-                    containerColor = MaroonPrimary,
-                    contentColor = Color.White
+                    containerColor = MaroonPrimary
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Workspace")
+                    Icon(Icons.Filled.Add, contentDescription = "Add Workspace", tint = Color.White)
                 }
                 DropdownMenu(
                     expanded = showMenu,
@@ -110,7 +104,7 @@ fun WorkspaceListContent(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No workspaces yet. Create one!")
+                Text("No workspaces yet. Create or join one!")
             }
         } else {
             LazyColumn(
@@ -137,7 +131,6 @@ fun WorkspaceListContent(
                         ),
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                         onClick = { onNavigateToWorkspaceDetail(workspace.id) },
-                        // 3. Apply Maroon to the Card Border (optional, but looks consistent)
                         border = BorderStroke(1.dp, MaroonPrimary)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -166,6 +159,8 @@ fun WorkspaceListScreenPreview() {
             Workspace(id = "1", name = "Workspace 1"),
             Workspace(id = "2", name = "Workspace 2")
         ),
-        onNavigateToWorkspaceDetail = {}
+        onNavigateToWorkspaceDetail = {},
+        onNavigateToCreateWorkspace = {},
+        onNavigateToJoinWorkspace = {}
     )
 }
