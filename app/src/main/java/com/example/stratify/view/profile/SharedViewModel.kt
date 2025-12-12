@@ -14,6 +14,9 @@ class SharedViewModel : ViewModel() {
     private val _workspaces = mutableStateListOf<Workspace>()
     val workspaces: List<Workspace> = _workspaces
 
+    private var lastDeletedWorkspace: Workspace? = null
+    private var lastDeletedWorkspaceIndex: Int = -1
+
     fun createWorkspace(name: String, code: String, password: String) {
         if (!workspaceExists(code)) {
             _workspaces.add(Workspace(id = code, name = name, password = password))
@@ -37,5 +40,24 @@ class SharedViewModel : ViewModel() {
 
     private fun workspaceExists(code: String): Boolean {
         return _workspaces.any { it.id == code }
+    }
+
+    fun deleteWorkspace(workspace: Workspace) {
+        val index = _workspaces.indexOf(workspace)
+        if (index != -1) {
+            lastDeletedWorkspace = workspace
+            lastDeletedWorkspaceIndex = index
+            _workspaces.removeAt(index)
+        }
+    }
+
+    fun undoDeleteWorkspace() {
+        lastDeletedWorkspace?.let {
+            if (lastDeletedWorkspaceIndex != -1) {
+                _workspaces.add(lastDeletedWorkspaceIndex, it)
+                lastDeletedWorkspace = null
+                lastDeletedWorkspaceIndex = -1
+            }
+        }
     }
 }
