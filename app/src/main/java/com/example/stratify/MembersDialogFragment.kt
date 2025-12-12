@@ -6,20 +6,32 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.DialogFragment
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
@@ -64,17 +76,20 @@ class MembersDialogFragment : DialogFragment() {
 
                 val members = memberNames.mapIndexed { index, name ->
                     val id = memberIds.getOrNull(index) ?: ""
+                    val isCurrentUser = id == currentUserId
+                    val photo = if (isCurrentUser) auth.currentUser?.photoUrl?.toString() else memberPhotos[id]
+
                     Member(
                         userId = id,
                         name = name,
-                        isYou = (id == currentUserId)
+                        isYou = isCurrentUser,
+                        photoUrl = photo
                     )
                 }
-                
+
                 MaterialTheme {
                     MembersDialogContent(
                         members = members,
-                        memberPhotos = memberPhotos,
                         onDismiss = { dismiss() }
                     )
                 }
@@ -108,7 +123,6 @@ class MembersDialogFragment : DialogFragment() {
 @Composable
 fun MembersDialogContent(
     members: List<Member>,
-    memberPhotos: Map<String, String>,
     onDismiss: () -> Unit
 ) {
     Card(shape = MaterialTheme.shapes.large) {
@@ -132,7 +146,7 @@ fun MembersDialogContent(
                     .padding(horizontal = 16.dp)
             ) {
                 items(members) { member ->
-                    MemberListItem(member = member, photoUrl = memberPhotos[member.userId])
+                    MemberListItem(member = member)
                 }
             }
 
@@ -143,15 +157,8 @@ fun MembersDialogContent(
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun MemberListItem(member: Member, photoUrl: String?) {
-    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+fun MemberListItem(member: Member) {
     val memberName = if (member.isYou) "${member.name} (You)" else member.name
-    
-    val photoUrlToLoad = if(member.isYou) {
-        FirebaseAuth.getInstance().currentUser?.photoUrl?.toString()
-    } else {
-        photoUrl
-    }
 
     Row(
         modifier = Modifier
@@ -160,7 +167,7 @@ fun MemberListItem(member: Member, photoUrl: String?) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         GlideImage(
-            model = photoUrlToLoad,
+            model = member.photoUrl,
             contentDescription = "Member profile photo",
             modifier = Modifier
                 .size(40.dp)
@@ -168,7 +175,7 @@ fun MemberListItem(member: Member, photoUrl: String?) {
             contentScale = ContentScale.Crop,
         ) {
             it.error(R.drawable.ic_profile_placeholder)
-             .placeholder(R.drawable.ic_profile_placeholder)
+                .placeholder(R.drawable.ic_profile_placeholder)
         }
 
         Spacer(modifier = Modifier.width(16.dp))
@@ -177,6 +184,23 @@ fun MemberListItem(member: Member, photoUrl: String?) {
             text = memberName,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = if (member.isYou) FontWeight.Bold else FontWeight.Normal
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MembersDialogContentPreview() {
+    val sampleMembers = listOf(
+        Member(userId = "1", name = "Maulidya", isYou = true, photoUrl = null),
+        Member(userId = "2", name = "John Doe", isYou = false, photoUrl = "https://example.com/photo.jpg"),
+        Member(userId = "3", name = "Jane Smith", isYou = false, photoUrl = "https://example.com/photo2.jpg")
+    )
+
+    MaterialTheme {
+        MembersDialogContent(
+            members = sampleMembers,
+            onDismiss = {}
         )
     }
 }

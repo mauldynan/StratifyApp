@@ -30,8 +30,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.stratify.DonutChart
 import com.example.stratify.R
 import com.example.stratify.Screen
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Icon
+import kotlinx.coroutines.launch
 
 
 // --- Colors ---
@@ -40,122 +39,165 @@ private val maroonPrimary = Color(0xFF800000)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(navController: NavController) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                DrawerContent(navController = navController, onCloseDrawer = {
+                    scope.launch {
+                        drawerState.close()
+                    }
+                })
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
                         Image(
                             painter = painterResource(id = R.drawable.logo_stratify3),
                             contentDescription = "Stratify Logo",
                             modifier = Modifier.height(72.dp)
                         )
-
-                        // Account icon at the header end
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_acc),
-                            contentDescription = "Account",
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(22.dp))
-                                .padding(4.dp)
-                                .clickable { navController.navigate(Screen.ProfileOptions.route) }
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = maroonPrimary
-                )
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White)
-                .verticalScroll(rememberScrollState())
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
-            // Title for the screen section
-            var searchQuery by remember { mutableStateOf("") }
-            Text(
-                text = "Analysis Apps",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = maroonPrimary,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 2.dp, bottom = 8.dp),
-                textAlign = TextAlign.Center
-            )
-
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp),
-                placeholder = { Text("Search", color = Color(0xFFB0B0B0)) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search Icon",
-                        modifier = Modifier.size(20.dp)
+                    },
+                    actions = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_acc),
+                                contentDescription = "Account",
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(22.dp))
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = maroonPrimary
                     )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(50),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = maroonPrimary,
-                    unfocusedBorderColor = Color.LightGray,
-                ),
-                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
-            )
+                )
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+                    .verticalScroll(rememberScrollState())
+                    .padding(paddingValues)
+                    .padding(16.dp)
+            ) {
+                // Title for the screen section
+                var searchQuery by remember { mutableStateOf("") }
+                Text(
+                    text = "Analysis Apps",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = maroonPrimary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp, bottom = 8.dp),
+                    textAlign = TextAlign.Center
+                )
 
-            Spacer(modifier = Modifier.height(20.dp))
+                // Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 56.dp),
 
-            // Monitored Applications Section
-            SectionHeader("Monitored Applications")
-            Spacer(modifier = Modifier.height(8.dp))
-            MonitoredAppCard(navController = navController)
+                    placeholder = { Text("Search", color = Color(0xFFB0B0B0)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search Icon",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(50),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = maroonPrimary,
+                        unfocusedBorderColor = Color.LightGray,
+                    ),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-            // Recently Viewed Apps Section
-            SectionHeader("Recently Viewed Apps")
-            Spacer(modifier = Modifier.height(8.dp))
-            RecentlyViewedApps()
+                // Monitored Applications Section
+                SectionHeader("Monitored Applications")
+                Spacer(modifier = Modifier.height(8.dp))
+                MonitoredAppCard(navController = navController)
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            // Recommendation Apps Section
-            SectionHeader("Recommendation Apps")
-            Spacer(modifier = Modifier.height(8.dp))
+                // Recently Viewed Apps Section
+                SectionHeader("Recently Viewed Apps")
+                Spacer(modifier = Modifier.height(8.dp))
+                RecentlyViewedApps()
 
-            RecommendationAppItemCard(
-                painter = painterResource(id = R.drawable.zalora_logo),
-                appName = "Zalora",
-                rating = "4.8 / 5 Bintang",
-                sales = "2.3M Terjual",
-                onClick = { /* navigasi ke detail Zalora */ }
-            )
+                Spacer(modifier = Modifier.height(24.dp))
 
-            RecommendationAppItemCard(
-                painter = painterResource(id = R.drawable.tokopedia_logo),
-                appName = "Tokopedia",
-                rating = "4.6 / 5 Bintang",
-                sales = "3.5M Terjual",
-                onClick = { /* navigasi ke detail Tokopedia */ }
-            )
+                // Recommendation Apps Section
+                SectionHeader("Recommendation Apps")
+                Spacer(modifier = Modifier.height(8.dp))
+
+                RecommendationAppItemCard(
+                    painter = painterResource(id = R.drawable.zalora_logo),
+                    appName = "Zalora",
+                    rating = "4.8 / 5 Bintang",
+                    sales = "2.3M Terjual",
+                    onClick = { /* navigasi ke detail Zalora */ }
+                )
+
+                RecommendationAppItemCard(
+                    painter = painterResource(id = R.drawable.tokopedia_logo),
+                    appName = "Tokopedia",
+                    rating = "4.6 / 5 Bintang",
+                    sales = "3.5M Terjual",
+                    onClick = { /* navigasi ke detail Tokopedia */ }
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun DrawerContent(navController: NavController, onCloseDrawer: () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(maroonPrimary)
+                .padding(vertical = 32.dp, horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text("Menu", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        NavigationDrawerItem(
+            label = { Text("Profile") },
+            selected = false,
+            onClick = {
+                navController.navigate(Screen.ProfileOptions.route)
+                onCloseDrawer()
+            },
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+
+        NavigationDrawerItem(
+            label = { Text("Logout") },
+            selected = false,
+            onClick = { /* TODO: Handle Logout */ onCloseDrawer() },
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
     }
 }
 

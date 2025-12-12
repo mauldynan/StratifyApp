@@ -5,22 +5,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding // Import added
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api // Import added
-import androidx.compose.material3.Scaffold // Import added
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar // Import added
-import androidx.compose.material3.TopAppBarDefaults // Import added
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight // Optional: makes header text pop
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -36,7 +28,7 @@ private val maroonPrimary = Color(0xFF800000)
 private val textYellow = Color(0xFFFFEB3B)
 
 /**
- * Main composable for the Workspace section.
+ * Main composable for the Workspace section. This is the entry point from MainActivity's NavHost.
  */
 @Composable
 fun MainWorkspaceScreen(viewModel: SharedViewModel) {
@@ -49,32 +41,13 @@ fun MainWorkspaceScreen(viewModel: SharedViewModel) {
     WorkspaceApp(startDestination = startDestination, viewModel = viewModel)
 }
 
-@OptIn(ExperimentalMaterial3Api::class) // Required for TopAppBar
 @Composable
 private fun WorkspaceApp(startDestination: String, viewModel: SharedViewModel) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Workspace",
-                        color = textYellow,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = maroonPrimary
-                )
-            )
-        }
-    ) { innerPadding ->
-        // We pass innerPadding to the NavHost via the modifier to prevent content overlap
-        WorkspaceNavHost(
-            modifier = Modifier.padding(innerPadding),
-            startDestination = startDestination,
-            viewModel = viewModel
-        )
-    }
+    // The Scaffold and NavDrawer have been removed. Each screen manages its own UI.
+    WorkspaceNavHost(
+        startDestination = startDestination,
+        viewModel = viewModel
+    )
 }
 
 @Composable
@@ -85,11 +58,7 @@ private fun WorkspaceNavHost(
 ) {
     val navController = rememberNavController()
 
-    NavHost(
-        navController = navController,
-        startDestination = startDestination,
-        modifier = modifier // essential for the Scaffold padding to work
-    ) {
+    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
         composable(WorkspaceScreen.Start.route) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -98,28 +67,22 @@ private fun WorkspaceNavHost(
             ) {
                 Button(
                     onClick = { navController.navigate(WorkspaceScreen.CreateWorkspace.route) },
-                    modifier = Modifier
-                        .width(250.dp)
-                        .height(60.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = maroonPrimary,
                         contentColor = textYellow
                     )
                 ) {
-                    Text("Create Workspace", fontSize = 18.sp)
+                    Text("Create Workspace")
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = { navController.navigate(WorkspaceScreen.JoinWorkspace.route) },
-                    modifier = Modifier
-                        .width(250.dp)
-                        .height(60.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = maroonPrimary,
                         contentColor = textYellow
                     )
                 ) {
-                    Text("Join Workspace", fontSize = 18.sp)
+                    Text("Join Workspace")
                 }
             }
         }

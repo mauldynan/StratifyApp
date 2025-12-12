@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,13 +46,14 @@ fun CreateWorkspaceScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Create Workspace") },
+                title = { Text("Create Workspace", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White,
                     titleContentColor = Color(0xFF800000),
                     navigationIconContentColor = Color(0xFF800000)
                 )
@@ -104,4 +106,10 @@ fun CreateWorkspaceScreen(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CreateWorkspaceScreenPreview() {
+    CreateWorkspaceScreen(onBackPressed = {}, onWorkspaceCreated = { _, _, _ -> })
 }

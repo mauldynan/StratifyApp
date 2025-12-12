@@ -34,13 +34,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.stratify.Workspace
 import com.example.stratify.view.profile.SharedViewModel
 
 // 1. Define the Maroon Color
 val MaroonPrimary = Color(0xFF800000)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkspaceListScreen(
     viewModel: SharedViewModel,
@@ -48,8 +49,18 @@ fun WorkspaceListScreen(
     onNavigateToCreateWorkspace: () -> Unit,
     onNavigateToJoinWorkspace: () -> Unit
 ) {
-    var showMenu by remember { mutableStateOf(false) }
+    WorkspaceListContent(
+        workspaces = viewModel.workspaces,
+        onNavigateToWorkspaceDetail = onNavigateToWorkspaceDetail
+    )
+}
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WorkspaceListContent(
+    workspaces: List<Workspace>,
+    onNavigateToWorkspaceDetail: (workspaceId: String) -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -92,7 +103,7 @@ fun WorkspaceListScreen(
             }
         }
     ) { paddingValues ->
-        if (viewModel.workspaces.isEmpty()) {
+        if (workspaces.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -117,7 +128,7 @@ fun WorkspaceListScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-                items(viewModel.workspaces) { workspace ->
+                items(workspaces) { workspace ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth(),
@@ -125,17 +136,36 @@ fun WorkspaceListScreen(
                             containerColor = Color.White
                         ),
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                        onClick = { onNavigateToWorkspaceDetail(workspace.code) },
+                        onClick = { onNavigateToWorkspaceDetail(workspace.id) },
                         // 3. Apply Maroon to the Card Border (optional, but looks consistent)
                         border = BorderStroke(1.dp, MaroonPrimary)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(text = workspace.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text(text = "Code: ${workspace.code}", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = workspace.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Code: ${workspace.id}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
                     }
                 }
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun WorkspaceListScreenPreview() {
+    WorkspaceListContent(
+        workspaces = listOf(
+            Workspace(id = "1", name = "Workspace 1"),
+            Workspace(id = "2", name = "Workspace 2")
+        ),
+        onNavigateToWorkspaceDetail = {}
+    )
 }

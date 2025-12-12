@@ -25,11 +25,7 @@
         tools:targetApi="31">
 
         <activity
-            android:name=".SignupActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".LoginActivity"
+            android:name=".SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -38,11 +34,15 @@
         </activity>
 
         <activity
-            android:name=".ForgotPasswordActivity"
+            android:name=".SignupActivity"
             android:exported="false" />
 
         <activity
-            android:name=".SplashActivity"
+            android:name=".LoginActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ForgotPasswordActivity"
             android:exported="false" />
 
         <activity

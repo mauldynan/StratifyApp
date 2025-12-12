@@ -55,7 +55,7 @@ android {
         }
     }
     aaptOptions {
-        noCompress += ".tflite"
+        noCompress("tflite")
     }
 }
 
@@ -118,11 +118,13 @@ dependencies {
     implementation("com.squareup.picasso:picasso:2.71828")
     implementation("com.squareup.okhttp3:okhttp:5.2.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("org.tensorflow:tensorflow-lite-task-text:0.4.3")
 
     // --- Other AndroidX Libraries ---
     implementation("androidx.slice:slice-builders:1.0.0")
     implementation("androidx.work:work-runtime-ktx:2.11.0")
+
+    // --- TensorFlow Lite ---
+    implementation("org.tensorflow:tensorflow-lite-task-text:0.4.0")
 
     // --- Testing ---
     testImplementation(libs.junit)
@@ -133,3 +135,4 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
