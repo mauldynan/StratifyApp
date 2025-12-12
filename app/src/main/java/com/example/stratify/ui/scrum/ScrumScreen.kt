@@ -7,7 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,6 +14,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.stratify.ui.theme.StratifyTheme
 
 // --- Colors ---
@@ -37,14 +38,28 @@ data class Task(
     var status: TaskStatus
 )
 
-fun getSampleTasks(): SnapshotStateList<Task> {
-    return mutableStateListOf()
+// --- ViewModel to hold state ---
+class ScrumViewModel : ViewModel() {
+    private val _tasks = mutableStateListOf<Task>()
+    val tasks: List<Task> = _tasks
+
+    fun addTask(name: String, deadline: String, department: String) {
+        val newId = (_tasks.maxOfOrNull { it.id } ?: 0) + 1
+        _tasks.add(Task(newId, name, deadline, department, TaskStatus.TODO))
+    }
+
+    fun updateTask(updatedTask: Task) {
+        val index = _tasks.indexOfFirst { it.id == updatedTask.id }
+        if (index != -1) {
+            _tasks[index] = updatedTask
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScrumScreen() {
-    val tasks = remember { getSampleTasks() }
+fun ScrumScreen(viewModel: ScrumViewModel = viewModel()) {
+    val tasks = viewModel.tasks
     var searchQuery by remember { mutableStateOf("") }
     var showAddTaskDialog by remember { mutableStateOf(false) }
 
@@ -55,8 +70,7 @@ fun ScrumScreen() {
         AddTaskDialog(
             onDismiss = { showAddTaskDialog = false },
             onTaskAdded = { name, deadline, department ->
-                val newId = (tasks.maxOfOrNull { it.id } ?: 0) + 1
-                tasks.add(Task(newId, name, deadline, department, TaskStatus.TODO))
+                viewModel.addTask(name, deadline, department)
                 showAddTaskDialog = false
             }
         )
@@ -97,8 +111,7 @@ fun ScrumScreen() {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(filteredTasks, key = { it.id }) { task ->
                     TaskItem(task = task, onUpdateTask = { updated ->
-                        val index = tasks.indexOfFirst { it.id == updated.id }
-                        if (index != -1) tasks[index] = updated
+                        viewModel.updateTask(updated)
                     })
                 }
             }
@@ -207,6 +220,10 @@ private fun InfoRow(label: String, value: String) {
 @Composable
 fun ScrumScreenPreview() {
     StratifyTheme {
-        ScrumScreen()
+        // Create a dummy ViewModel for the preview
+        val previewViewModel = ScrumViewModel()
+        previewViewModel.addTask("Sample Task 1", "2024-12-25", "Design")
+        previewViewModel.addTask("Sample Task 2", "2024-11-30", "Development")
+        ScrumScreen(viewModel = previewViewModel)
     }
 }

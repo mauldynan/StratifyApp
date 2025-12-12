@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -21,10 +22,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,10 +65,15 @@ fun WorkspaceListContent(
     onNavigateToJoinWorkspace: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredWorkspaces = workspaces.filter {
+        it.name.contains(searchQuery, ignoreCase = true)
+    }
 
     Scaffold(
         floatingActionButton = {
-            Box {
+            Box(modifier = Modifier.padding(bottom = 16.dp)) {
                 FloatingActionButton(
                     onClick = { showMenu = true },
                     containerColor = MaroonPrimary
@@ -97,7 +102,7 @@ fun WorkspaceListContent(
             }
         }
     ) { paddingValues ->
-        if (workspaces.isEmpty()) {
+        if (workspaces.isEmpty() && searchQuery.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -111,10 +116,11 @@ fun WorkspaceListContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "My Workspaces",
                         style = MaterialTheme.typography.headlineSmall,
@@ -122,7 +128,17 @@ fun WorkspaceListContent(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-                items(workspaces) { workspace ->
+                item {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        label = { Text("Search ...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+                        singleLine = true
+                    )
+                }
+                items(filteredWorkspaces) { workspace ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth(),
