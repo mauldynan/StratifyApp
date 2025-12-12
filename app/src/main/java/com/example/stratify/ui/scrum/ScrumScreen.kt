@@ -1,5 +1,6 @@
 package com.example.stratify.ui.scrum
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.stratify.ui.theme.StratifyTheme
+import kotlinx.coroutines.launch
 
 // --- Colors ---
 private val maroonPrimary = Color(0xFF760000)
@@ -43,6 +45,7 @@ data class Task(
 class ScrumViewModel : ViewModel() {
     private val _tasks = mutableStateListOf<Task>()
     val tasks: List<Task> = _tasks
+    private var lastDeletedTask: Pair<Int, Task>? = null
 
     fun addTask(name: String, deadline: String, department: String) {
         val newId = (_tasks.maxOfOrNull { it.id } ?: 0) + 1
@@ -55,6 +58,20 @@ class ScrumViewModel : ViewModel() {
             _tasks[index] = updatedTask
         }
     }
+
+    fun deleteTask(task: Task) {
+        val index = _tasks.indexOf(task)
+        if (index != -1) {
+            lastDeletedTask = Pair(index, task)
+            _tasks.removeAt(index)
+        }
+    }
+
+    fun undoDelete() {
+        lastDeletedTask?.let { (index, task) ->
+            _tasks.add(index, task)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,6 +80,8 @@ fun ScrumScreen(viewModel: ScrumViewModel = viewModel()) {
     val tasks = viewModel.tasks
     var searchQuery by remember { mutableStateOf("") }
     var showAddTaskDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     val filteredTasks = if (searchQuery.isEmpty()) tasks else tasks.filter { it.name.contains(searchQuery, ignoreCase = true) }
 
@@ -78,9 +97,10 @@ fun ScrumScreen(viewModel: ScrumViewModel = viewModel()) {
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Scrum", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 20.sp, color = textYellow) },
+                title = { Text("Scrum", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = textYellow) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = maroonPrimary)
             )
         },
@@ -126,9 +146,55 @@ fun ScrumScreen(viewModel: ScrumViewModel = viewModel()) {
             // Task List
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(filteredTasks, key = { it.id }) { task ->
-                    TaskItem(task = task, onUpdateTask = { updated ->
-                        viewModel.updateTask(updated)
-                    })
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = {
+                            if (it == SwipeToDismissBoxValue.EndToStart) {
+                                viewModel.deleteTask(task)
+                                coroutineScope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = "Task deleted",
+                                        actionLabel = "Undo",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        viewModel.undoDelete()
+                                    }
+                                }
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                    )
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        enableDismissFromStartToEnd = false,
+                        enableDismissFromEndToStart = true,
+                        backgroundContent = {
+                            val color = when (dismissState.targetValue) {
+                                SwipeToDismissBoxValue.EndToStart -> Color.Red.copy(alpha = 0.7f)
+                                else -> Color.Transparent
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(color, shape = RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Delete Task",
+                                    tint = Color.White
+                                )
+                            }
+                        },
+                        content = {
+                            TaskItem(task = task, onUpdateTask = { updated ->
+                                viewModel.updateTask(updated)
+                            })
+                        }
+                    )
                 }
             }
         }
@@ -165,7 +231,7 @@ fun TaskItem(task: Task, onUpdateTask: (Task) -> Unit) {
             } else {
                 // Display Mode
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(task.name, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 16.sp)
+                    Text(task.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     IconButton(onClick = { isEditing = true }) { Icon(Icons.Default.Edit, contentDescription = "Edit Task") }
                 }
                 InfoRow("Deadline:", task.deadline)
@@ -185,7 +251,7 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onTaskAdded: (String, String, S
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add New Task", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+        title = { Text("Add New Task", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Task Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -220,14 +286,14 @@ private fun StatusBadge(status: TaskStatus) {
         TaskStatus.DONE -> maroonPrimary
     }
     Card(colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))) {
-        Text(status.displayName, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), color = color, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 12.sp)
+        Text(status.displayName, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp)
     }
 }
 
 @Composable
 private fun InfoRow(label: String, value: String) {
     Row {
-        Text(label, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.width(100.dp))
+        Text(label, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(100.dp))
         Text(value)
     }
 }
