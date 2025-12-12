@@ -146,14 +146,24 @@ private fun WorkspaceNavHost(
                 onBackPressed = { navController.navigateUp() }
             )
         }
+        // In: C:/Users/abrah/Work_Projects/StratifyApp/app/src/main/java/com/example/stratify/MainWorkspace.kt
+
         composable(WorkspaceScreen.WorkspaceList.route) {
             WorkspaceListScreen(
                 viewModel = viewModel,
                 onNavigateToWorkspaceDetail = { workspaceId ->
                     navController.navigate(WorkspaceScreen.WorkspaceDetail.createRoute(workspaceId))
+                },
+                onNavigateToCreateWorkspace = {
+                    navController.navigate(WorkspaceScreen.CreateWorkspace.route)
+                },
+                // --- FIX: Add the missing parameter here ---
+                onNavigateToJoinWorkspace = {
+                    navController.navigate(WorkspaceScreen.JoinWorkspace.route)
                 }
             )
         }
+
         composable(
             route = WorkspaceScreen.WorkspaceDetail.route,
             arguments = WorkspaceScreen.WorkspaceDetail.navArguments
