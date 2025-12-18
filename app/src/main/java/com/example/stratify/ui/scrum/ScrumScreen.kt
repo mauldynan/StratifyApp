@@ -1,6 +1,8 @@
 package com.example.stratify.ui.scrum
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,7 +21,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.stratify.ui.theme.StratifyTheme
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 // --- Colors ---
 private val maroonPrimary = Color(0xFF760000)
@@ -215,7 +221,15 @@ fun TaskItem(task: Task, onUpdateTask: (Task) -> Unit) {
             if (isEditing) {
                 // Edit Mode
                 OutlinedTextField(value = editedName, onValueChange = { editedName = it }, label = { Text("Task Name") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = editedDeadline, onValueChange = { editedDeadline = it }, label = { Text("Deadline") }, modifier = Modifier.fillMaxWidth())
+                
+                // Use DatePickerField for editing deadline
+                DatePickerField(
+                    value = editedDeadline,
+                    onValueChange = { editedDeadline = it },
+                    label = "Deadline",
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
                 OutlinedTextField(value = editedDepartment, onValueChange = { editedDepartment = it }, label = { Text("Department") }, modifier = Modifier.fillMaxWidth())
 
                 StatusSelector(selectedStatus = editedStatus, onStatusSelected = { editedStatus = it })
@@ -255,13 +269,93 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onTaskAdded: (String, String, S
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Task Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(value = deadline, onValueChange = { deadline = it }, label = { Text("Deadline") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                
+                // Use DatePickerField for new task deadline
+                DatePickerField(
+                    value = deadline,
+                    onValueChange = { deadline = it },
+                    label = "Deadline",
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
                 OutlinedTextField(value = department, onValueChange = { department = it }, label = { Text("Department") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             }
         },
         confirmButton = { Button(onClick = { onTaskAdded(name, deadline, department) }, enabled = isFormValid) { Text("Add Task") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DatePickerField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    var showDatePicker by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect {
+            if (it is PressInteraction.Release) {
+                showDatePicker = true
+            }
+        }
+    }
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = {},
+        label = { Text(label) },
+        modifier = modifier,
+        readOnly = true,
+        singleLine = true,
+        trailingIcon = {
+            IconButton(onClick = { showDatePicker = true }) {
+                Icon(Icons.Default.DateRange, contentDescription = "Select Date")
+            }
+        },
+        interactionSource = interactionSource
+    )
+
+    if (showDatePicker) {
+        val initialDateMillis = remember(value) {
+            if (value.isNotBlank()) {
+                try {
+                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(value)?.time
+                } catch (e: Exception) {
+                    System.currentTimeMillis()
+                }
+            } else {
+                System.currentTimeMillis()
+            }
+        }
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateMillis)
+
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        onValueChange(formatter.format(Date(millis)))
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 }
 
 @Composable

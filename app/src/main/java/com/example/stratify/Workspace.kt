@@ -22,7 +22,8 @@ data class Workspace(
     var details: String = "",
     @ServerTimestamp
     val createdAt: Date? = null,
-    val updatedAt: Long = System.currentTimeMillis()
+    val updatedAt: Long = System.currentTimeMillis(),
+    var isJoined: Boolean = false
 ) : Parcelable {
 
     constructor() : this(
@@ -38,6 +39,7 @@ data class Workspace(
         memberPhotos = hashMapOf(),
         details = "",
         createdAt = null,
-        updatedAt = System.currentTimeMillis()
+        updatedAt = System.currentTimeMillis(),
+        isJoined = false
     )
 }

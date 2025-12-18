@@ -1,4 +1,3 @@
-
 package com.example.stratify.ui.workspace
 
 import androidx.compose.foundation.BorderStroke
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -94,7 +94,10 @@ fun WorkspaceListContent(
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            Box(modifier = Modifier.padding(bottom = 16.dp)) {
+            // Lowered FAB significantly
+            Box(modifier = Modifier
+                .padding(bottom = 0.dp)
+                .offset(y = 40.dp)) {
                 FloatingActionButton(
                     onClick = { showMenu = true },
                     containerColor = MaroonPrimary
@@ -144,13 +147,14 @@ fun WorkspaceListContent(
                     onValueChange = { searchQuery = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(64.dp),
+                        .height(70.dp) // Increased height only
+                        .offset(y = (-10).dp), // Moved up
                     placeholder = { Text("Search", color = Color(0xFFB0B0B0)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Search Icon",
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     },
                     singleLine = true,
@@ -158,8 +162,7 @@ fun WorkspaceListContent(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaroonPrimary,
                         unfocusedBorderColor = Color.LightGray,
-                    ),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp)
+                    )
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 LazyColumn(
@@ -243,7 +246,6 @@ fun WorkspaceListContent(
 @Preview(showBackground = true)
 @Composable
 fun WorkspaceListScreenPreview() {
-    // This preview will not have swipe-to-delete functionality as it requires a ViewModel.
     WorkspaceListContent(
         viewModel = SharedViewModel(),
         workspaces = listOf(
