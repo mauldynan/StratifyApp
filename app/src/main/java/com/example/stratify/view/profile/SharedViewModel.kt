@@ -19,7 +19,8 @@ class SharedViewModel : ViewModel() {
 
     fun createWorkspace(name: String, code: String, password: String) {
         if (!workspaceExists(code)) {
-            _workspaces.add(Workspace(id = code, name = name, password = password))
+            val initialMembers = arrayListOf(displayName.value ?: "Creator")
+            _workspaces.add(Workspace(id = code, name = name, password = password, isJoined = false, members = initialMembers))
         }
     }
 
@@ -29,13 +30,35 @@ class SharedViewModel : ViewModel() {
         return liveData
     }
 
+    fun updateWorkspace(updatedWorkspace: Workspace) {
+        val index = _workspaces.indexOfFirst { it.id == updatedWorkspace.id }
+        if (index != -1) {
+            _workspaces[index] = updatedWorkspace
+        }
+    }
+
     fun joinWorkspace(code: String, password: String): Boolean {
         if (workspaceExists(code)) {
+            val index = _workspaces.indexOfFirst { it.id == code }
+            if (index != -1) {
+                val existing = _workspaces[index]
+                
+                // Only add member if transitioning to joined status
+                if (!existing.isJoined) {
+                    val updatedMembers = ArrayList(existing.members)
+                    updatedMembers.add(displayName.value ?: "Member")
+
+                    _workspaces[index] = existing.copy(
+                        isJoined = true,
+                        members = updatedMembers
+                    )
+                }
+            }
             return true
         }
-
-        _workspaces.add(Workspace(id = code, name = "Joined: $code", password = password))
-        return true
+        
+        // Cannot join a workspace that doesn't exist
+        return false
     }
 
     private fun workspaceExists(code: String): Boolean {
