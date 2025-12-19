@@ -92,39 +92,50 @@ fun FullAnalysisScreen(onBackClick: () -> Unit) {
 
             // --- BAGIAN 1: SHOPEE CARD & DONUT CHART ---
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier.fillMaxWidth().height(150.dp),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
                 Row(
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier.fillMaxSize(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Logo Shopee
-                    // Pastikan kamu punya gambar 'shopee_logo' di res/drawable
                     Image(
                         painter = painterResource(id = R.drawable.shopee_logo),
                         contentDescription = "Shopee Logo",
-                        modifier = Modifier.size(60.dp),
+                        modifier = Modifier.size(80.dp).padding(start = 12.dp),
                         contentScale = ContentScale.Fit
                     )
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // Teks Nama & Rating
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Shopee", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                        Text("4.6/5 Bintang", fontSize = 12.sp, color = Color.Gray)
+                    Column(
+                        modifier = Modifier.padding(start = 8.dp, end = 12.dp)
+                    ) {
+                        Text(
+                            text = "Shopee",
+                            color = Color.Black,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "4.6 / 5 Bintang",
+                            color = Color.DarkGray,
+                            fontSize = 12.sp
+                        )
                     }
 
-                    // Donut Chart (Memanggil file DonutChart.kt)
-                    Box(modifier = Modifier.size(width = 160.dp, height = 90.dp)) {
+                    Spacer(Modifier.weight(1f))
+
+                    Column(
+                        modifier = Modifier.padding(end = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
                         DonutChart(
+                            modifier = Modifier.size(width = 140.dp, height = 70.dp),
                             positivePercent = 70f,
                             negativePercent = 30f,
-                            totalReviews = 1250,
-                            modifier = Modifier.fillMaxSize()
+                            totalReviews = 1200
                         )
                     }
                 }

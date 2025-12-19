@@ -6,7 +6,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -22,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
@@ -89,9 +89,6 @@ fun SignupScreen(
         """^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"""
     )
 
-    // Glow soft color
-    val glowColor = Color(0xFFFFE57F)
-
     Surface(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize()) {
 
@@ -100,9 +97,10 @@ fun SignupScreen(
                 painter = painterResource(id = R.drawable.elips),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(600.dp)
+                    .size(800.dp)
                     .align(Alignment.TopEnd)
-                    .offset(x = 200.dp, y = (-250).dp)
+                    .offset(x = 200.dp, y = (-200).dp)
+                    .alpha(0.3f)
             )
 
             // BOTTOM glow
@@ -110,9 +108,10 @@ fun SignupScreen(
                 painter = painterResource(id = R.drawable.elips),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(600.dp)
+                    .size(800.dp)
                     .align(Alignment.BottomStart)
-                    .offset(x = (-200).dp, y = 250.dp)
+                    .offset(x = (-200).dp, y = 200.dp)
+                    .alpha(0.3f)
             )
 
             Column(
@@ -283,8 +282,5 @@ fun SignupScreen(
 @Preview(showBackground = true)
 @Composable
 fun SignupScreenPreview() {
-    SignupScreen(
-        onSignupClicked = { _, _, _, _ -> },
-        onSignInClicked = {}
-    )
+    SignupScreen(onSignupClicked = { _, _, _, _ -> }, onSignInClicked = {})
 }

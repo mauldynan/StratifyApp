@@ -52,6 +52,7 @@ fun ProfileOptionsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0x55000000))
+            .clickable { onNavigateBack() }
     ){
 
         // DRAWER KANAN
@@ -68,6 +69,7 @@ fun ProfileOptionsScreen(
                     )
                 )
                 .verticalScroll(rememberScrollState())
+                .clickable(enabled = false) {}
         ) {
 
             // HEADER

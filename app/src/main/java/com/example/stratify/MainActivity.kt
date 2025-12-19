@@ -29,7 +29,7 @@ sealed class Screen(val route: String) {
     object Scrum : Screen("scrum")
     object MainWorkspace : Screen("main_workspace")
     object ProfileOptions : Screen("profile_options")
-    object ProfileEdit : Screen("profile_edit")
+    object EditProfile : Screen("edit_profile")
     object Login : Screen("login")
 }
 
@@ -62,7 +62,7 @@ fun AppNavigation(viewModel: SharedViewModel) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Dashboard.route) {
-                DashboardScreen(navController = navController)
+                DashboardScreen(navController = navController, sharedViewModel = viewModel)
             }
 
             composable(Screen.FullAnalysis.route) {
@@ -83,7 +83,7 @@ fun AppNavigation(viewModel: SharedViewModel) {
             composable(Screen.ProfileOptions.route) {
                 ProfileOptionsScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onEditProfileClicked = { navController.navigate(Screen.ProfileEdit.route) },
+                    onEditProfileClicked = { navController.navigate(Screen.EditProfile.route) },
                     onLogoutClicked = {
                         auth.signOut()
                         Toast.makeText(context, "Logged out", Toast.LENGTH_SHORT).show()
@@ -91,8 +91,9 @@ fun AppNavigation(viewModel: SharedViewModel) {
                 )
             }
 
-            composable(Screen.ProfileEdit.route) {
+            composable(Screen.EditProfile.route) {
                 ProfileEditScreen(
+                    sharedViewModel = viewModel,
                     onNavigateBack = { navController.popBackStack() },
                     onProfileUpdated = { name, _ ->
                         Toast.makeText(context, "Welcome back, $name", Toast.LENGTH_SHORT).show()

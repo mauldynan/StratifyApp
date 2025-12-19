@@ -109,6 +109,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended") // Keep version here as it is not in BOM
     implementation("androidx.compose.runtime:runtime-livedata") // Keep version here
     implementation("com.github.bumptech.glide:compose:1.0.0-beta01")
+    implementation("androidx.compose.material3:material3")
 
     // --- 3rd Party Libraries ---
     implementation(libs.glide)

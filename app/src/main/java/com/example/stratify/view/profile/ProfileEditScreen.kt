@@ -54,6 +54,7 @@ private const val UPLOAD_PRESET = "android_upload_cloudinary"
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalGlideComposeApi::class)
 @Composable
 fun ProfileEditScreen(
+    sharedViewModel: SharedViewModel,
     onNavigateBack: () -> Unit,
     onProfileUpdated: (String, String?) -> Unit
 ) {
@@ -84,6 +85,7 @@ fun ProfileEditScreen(
         uri?.let {
             newImageUri = it
             displayedImageModel = it
+            sharedViewModel.photoUri.value = it
         }
     }
 
@@ -93,6 +95,7 @@ fun ProfileEditScreen(
         if (success && tempCameraUri != null) {
             newImageUri = tempCameraUri
             displayedImageModel = tempCameraUri
+            sharedViewModel.photoUri.value = tempCameraUri
         }
     }
 
@@ -204,6 +207,7 @@ fun ProfileEditScreen(
                                     uploadImageToCloudinary(context, newImageUri!!, name) { success, url ->
                                         if (success) {
                                             onProfileUpdated(name, url)
+                                            sharedViewModel.displayName.value = name
                                             Toast.makeText(context, "Profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
                                             onNavigateBack()
                                         }
@@ -213,6 +217,7 @@ fun ProfileEditScreen(
                                     updateFirebaseProfile(name, null) { success ->
                                         if (success) {
                                             onProfileUpdated(name, null)
+                                            sharedViewModel.displayName.value = name
                                             Toast.makeText(context, "Profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
                                             onNavigateBack()
                                         } else {
@@ -295,7 +300,7 @@ fun ProfileEditScreen(
 //    HELPER FUNCTIONS (Dibuat PRIVATE)
 // ==========================================
 
-// Private agar tidak bentrok dengan file lain
+// Private agar tidak bentrock dengan file lain
 private fun createTempImageUri(context: Context): Uri {
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     val storageDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
