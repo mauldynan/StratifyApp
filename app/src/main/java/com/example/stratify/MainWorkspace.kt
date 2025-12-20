@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +39,11 @@ private val goldAccent = Color(0xFFEBC05C)
  */
 @Composable
 fun MainWorkspaceScreen(viewModel: SharedViewModel) {
+    // Load workspaces when screen is launched
+    LaunchedEffect(Unit) {
+        viewModel.loadWorkspaces()
+    }
+
     val startDestination = if (viewModel.workspaces.isEmpty()) {
         WorkspaceScreen.Start.route
     } else {
@@ -138,9 +144,11 @@ private fun WorkspaceNavHost(
         composable(WorkspaceScreen.JoinWorkspace.route) {
             JoinWorkspaceScreen(
                 onWorkspaceJoined = { code, password ->
-                    if (viewModel.joinWorkspace(code, password)) {
-                        navController.navigate(WorkspaceScreen.WorkspaceList.route) {
-                            popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
+                    viewModel.joinWorkspace(code, password) { success ->
+                        if (success) {
+                            navController.navigate(WorkspaceScreen.WorkspaceList.route) {
+                                popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
+                            }
                         }
                     }
                 },

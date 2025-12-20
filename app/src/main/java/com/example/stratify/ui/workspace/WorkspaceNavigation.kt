@@ -10,6 +10,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,6 +56,11 @@ fun WorkspaceNavHost(
     viewModel: SharedViewModel
 ) {
     val navController = rememberNavController()
+
+    // Ensure workspaces are loaded when the host starts
+    LaunchedEffect(Unit) {
+        viewModel.loadWorkspaces()
+    }
 
     NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
         composable(WorkspaceScreen.Start.route) {
@@ -104,9 +110,11 @@ fun WorkspaceNavHost(
         composable(WorkspaceScreen.JoinWorkspace.route) {
             JoinWorkspaceScreen(
                 onWorkspaceJoined = { code, password ->
-                    if (viewModel.joinWorkspace(code, password)) {
-                        navController.navigate(WorkspaceScreen.WorkspaceList.route) {
-                            popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
+                    viewModel.joinWorkspace(code, password) { success ->
+                        if (success) {
+                            navController.navigate(WorkspaceScreen.WorkspaceList.route) {
+                                popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
+                            }
                         }
                     }
                 },
