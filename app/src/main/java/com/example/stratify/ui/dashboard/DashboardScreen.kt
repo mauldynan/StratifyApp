@@ -43,6 +43,9 @@ import com.example.stratify.R
 import com.example.stratify.Screen
 import com.example.stratify.view.profile.SharedViewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.example.stratify.compare.DashboardViewModel
+import com.example.stratify.compare.Review
+
 
 // --- Optimized Colors ---
 private val maroonPrimary = Color(0xFF760000)
@@ -55,6 +58,7 @@ private val lightBg = Color(0xFFF8F9FB)
 data class EcommerceAppData(
     val id: Int,
     val name: String,
+    val firebaseKey: String,
     val logo: Int,
     val rating: String,
     val reviews: String,
@@ -83,17 +87,17 @@ fun DashboardScreen(navController: NavController, sharedViewModel: SharedViewMod
     // Mock Database terintegrasi
     val ecommerceApps = remember {
         listOf(
-            EcommerceAppData(1, "Shopee", R.drawable.shopee_logo, "4.8", "1.2M", 850, 150, listOf(
+            EcommerceAppData(1, "Shopee", "shopee", R.drawable.shopee_logo, "4.8", "1.2M", 850, 150, listOf(
                 "Budi S." to "Love the free shipping vouchers!",
                 "Siti A." to "Items arrived fast and as described.",
                 "Andi W." to "App feels a bit laggy sometimes."
             )),
-            EcommerceAppData(2, "Tokopedia", R.drawable.tokopedia_logo, "4.7", "900K", 780, 220, listOf(
+            EcommerceAppData(2, "Tokopedia", "tokopedia", R.drawable.tokopedia_logo, "4.7", "900K", 780, 220, listOf(
                 "Rina K." to "Everything is original in Official Stores.",
                 "Dedi H." to "Customer service is very responsive.",
                 "Lina M." to "Update frequency is a bit too high."
             )),
-            EcommerceAppData(3, "Tiktok", R.drawable.tiktok_logo, "4.5", "600K", 600, 400, listOf(
+            EcommerceAppData(3, "Tiktok", "tiktok",R.drawable.tiktok_logo, "4.5", "600K", 600, 400, listOf(
                 "Eko P." to "Great monthly discounts available.",
                 "Ani R." to "Very secure packaging.",
                 "Zaki F." to "Shipping takes too long."
@@ -235,13 +239,16 @@ fun DashboardScreen(navController: NavController, sharedViewModel: SharedViewMod
                             isSelectingForCompare = compareA?.id == app.id,
                             onSaveToggle = { savedAppId = if (savedAppId == app.id) null else app.id },
                             onCompareClick = {
+                                val fullApp = ecommerceApps.first { it.id == app.id }
+
                                 if (compareA == null) {
-                                    compareA = app
-                                } else if (compareA?.id != app.id) {
-                                    compareB = app
+                                    compareA = fullApp
+                                } else if (compareA?.id != fullApp.id) {
+                                    compareB = fullApp
                                     isCompareViewActive = true
                                 }
                             }
+
                         )
                     }
                 }
@@ -251,8 +258,29 @@ fun DashboardScreen(navController: NavController, sharedViewModel: SharedViewMod
 }
 
 @Composable
-fun CompareViewContent(appA: EcommerceAppData, appB: EcommerceAppData, onBack: () -> Unit) {
+fun CompareViewContent(
+    appA: EcommerceAppData,
+    appB: EcommerceAppData,
+    onBack: () -> Unit,
+    viewModel: DashboardViewModel = viewModel()
+) {
+
+    // 🔥 LOAD FIREBASE SEKALI
+    LaunchedEffect(Unit) {
+        viewModel.loadReviews()
+    }
+
+    // 🔥 AMBIL DATA SESUAI APP
+    val reviewsA =
+        if (appA.name == "Shopee") viewModel.shopeeReviews.value
+        else viewModel.tokopediaReviews.value
+
+    val reviewsB =
+        if (appB.name == "Shopee") viewModel.shopeeReviews.value
+        else viewModel.tokopediaReviews.value
+
     Column(modifier = Modifier.fillMaxWidth()) {
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(32.dp),
@@ -260,6 +288,8 @@ fun CompareViewContent(appA: EcommerceAppData, appB: EcommerceAppData, onBack: (
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
+
+                // HEADER
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -269,50 +299,120 @@ fun CompareViewContent(appA: EcommerceAppData, appB: EcommerceAppData, onBack: (
                         Image(painterResource(appA.logo), null, Modifier.size(50.dp))
                         Text(appA.name, fontWeight = FontWeight.Black, color = maroonPrimary)
                     }
-                    Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(maroonPrimary), contentAlignment = Alignment.Center) {
-                        Text("VS", color = goldAccent, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic)
+
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(maroonPrimary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("VS", color = goldAccent, fontWeight = FontWeight.Black)
                     }
+
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                         Image(painterResource(appB.logo), null, Modifier.size(50.dp))
                         Text(appB.name, fontWeight = FontWeight.Black, color = maroonPrimary)
                     }
                 }
-                Spacer(Modifier.height(24.dp))
-                Text("RATING & REVIEWS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(lightBg).padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+
+                Spacer(Modifier.height(20.dp))
+
+                // RATING
+                Text(
+                    "RATING & REVIEWS",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.Gray,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = lightBg)
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                        Text(appA.rating, fontSize = 18.sp, fontWeight = FontWeight.Black, color = maroonPrimary)
-                        Text(appA.reviews, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-                    }
-                    Box(Modifier.width(1.dp).height(30.dp).background(Color.LightGray))
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                        Text(appB.rating, fontSize = 18.sp, fontWeight = FontWeight.Black, color = maroonPrimary)
-                        Text(appB.reviews, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(appA.rating, fontSize = 26.sp, fontWeight = FontWeight.Black, color = maroonPrimary)
+                            Text(appA.reviews, fontSize = 11.sp, color = Color.Gray)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(48.dp)
+                                .background(Color.LightGray)
+                        )
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(appB.rating, fontSize = 26.sp, fontWeight = FontWeight.Black, color = maroonPrimary)
+                            Text(appB.reviews, fontSize = 11.sp, color = Color.Gray)
+                        }
                     }
                 }
+
                 Spacer(Modifier.height(24.dp))
-                Text("LATEST REVIEWS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+
+                // LATEST REVIEWS
+                Text(
+                    "LATEST REVIEWS",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.Gray,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+
                 Spacer(Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        appA.latestComments.take(3).forEach { (user, comment) -> CompareCommentItem(user, comment) }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        reviewsA.forEach {
+                            CompareCommentItem(it.userName, it.content)
+                        }
                     }
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        appB.latestComments.take(3).forEach { (user, comment) -> CompareCommentItem(user, comment) }
+                    Column(modifier = Modifier.weight(1f)) {
+                        reviewsB.forEach {
+                            CompareCommentItem(it.userName, it.content)
+                        }
                     }
                 }
             }
         }
+
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onBack, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = maroonPrimary), shape = RoundedCornerShape(24.dp)) {
+
+        Button(
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = maroonPrimary),
+            shape = RoundedCornerShape(24.dp)
+        ) {
             Text("BACK TO LIST", fontWeight = FontWeight.Black, color = goldAccent)
         }
     }
 }
+
+
 
 @Composable
 fun CompareCommentItem(user: String, comment: String) {
