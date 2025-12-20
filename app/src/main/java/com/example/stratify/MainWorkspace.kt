@@ -10,12 +10,22 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import com.example.stratify.ui.workspace.WorkspaceNavHost
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.stratify.ui.workspace.CreateWorkspaceScreen
+import com.example.stratify.ui.workspace.JoinWorkspaceScreen
+import com.example.stratify.ui.workspace.WorkspaceDetailScreen
+import com.example.stratify.ui.workspace.WorkspaceListScreen
 import com.example.stratify.ui.workspace.WorkspaceScreen
 import com.example.stratify.view.profile.SharedViewModel
 
@@ -25,6 +35,11 @@ private val goldAccent = Color(0xFFEBC05C)
 
 @Composable
 fun MainWorkspaceScreen(viewModel: SharedViewModel) {
+    // Load workspaces when screen is launched
+    LaunchedEffect(Unit) {
+        viewModel.loadWorkspaces()
+    }
+
     val startDestination = if (viewModel.workspaces.isEmpty()) {
         WorkspaceScreen.Start.route
     } else {
@@ -127,9 +142,11 @@ private fun WorkspaceNavHost(
         composable(WorkspaceScreen.JoinWorkspace.route) {
             JoinWorkspaceScreen(
                 onWorkspaceJoined = { code, password ->
-                    if (viewModel.joinWorkspace(code, password)) {
-                        navController.navigate(WorkspaceScreen.WorkspaceList.route) {
-                            popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
+                    viewModel.joinWorkspace(code, password) { success ->
+                        if (success) {
+                            navController.navigate(WorkspaceScreen.WorkspaceList.route) {
+                                popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
+                            }
                         }
                     }
                 },

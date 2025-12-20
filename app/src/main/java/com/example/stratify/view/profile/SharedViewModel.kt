@@ -5,7 +5,10 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.stratify.Workspace
+import com.example.stratify.WorkspaceRepository
+import kotlinx.coroutines.launch
 
 class SharedViewModel : ViewModel() {
     val displayName = MutableLiveData<String>()
@@ -17,10 +20,25 @@ class SharedViewModel : ViewModel() {
     private var lastDeletedWorkspace: Workspace? = null
     private var lastDeletedWorkspaceIndex: Int = -1
 
+    private val repository = WorkspaceRepository()
+    private var listenerRegistration: com.google.firebase.firestore.ListenerRegistration? = null
+
+    fun loadWorkspaces() {
+        listenerRegistration?.remove()
+        listenerRegistration = repository.listenToUserWorkspaces(
+            onWorkspacesChanged = { newWorkspaces ->
+                _workspaces.clear()
+                _workspaces.addAll(newWorkspaces)
+            },
+            onError = { e ->
+                e.printStackTrace()
+            }
+        )
+    }
+
     fun createWorkspace(name: String, code: String, password: String) {
-        if (!workspaceExists(code)) {
-            val initialMembers = arrayListOf(displayName.value ?: "Creator")
-            _workspaces.add(Workspace(id = code, name = name, password = password, isJoined = false, members = initialMembers))
+        viewModelScope.launch {
+            repository.createWorkspace(code, name, password)
         }
     }
 
@@ -35,30 +53,21 @@ class SharedViewModel : ViewModel() {
         if (index != -1) {
             _workspaces[index] = updatedWorkspace
         }
+        
+        viewModelScope.launch {
+            repository.updateWorkspace(updatedWorkspace)
+        }
     }
 
-    fun joinWorkspace(code: String, password: String): Boolean {
-        if (workspaceExists(code)) {
-            val index = _workspaces.indexOfFirst { it.id == code }
-            if (index != -1) {
-                val existing = _workspaces[index]
-                
-                // Only add member if transitioning to joined status
-                if (!existing.isJoined) {
-                    val updatedMembers = ArrayList(existing.members)
-                    updatedMembers.add(displayName.value ?: "Member")
-
-                    _workspaces[index] = existing.copy(
-                        isJoined = true,
-                        members = updatedMembers
-                    )
-                }
+    fun joinWorkspace(code: String, password: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.joinWorkspace(code, password)
+            if (result.isSuccess) {
+                onResult(true)
+            } else {
+                onResult(false)
             }
-            return true
         }
-        
-        // Cannot join a workspace that doesn't exist
-        return false
     }
 
     private fun workspaceExists(code: String): Boolean {
@@ -71,16 +80,31 @@ class SharedViewModel : ViewModel() {
             lastDeletedWorkspace = workspace
             lastDeletedWorkspaceIndex = index
             _workspaces.removeAt(index)
+            
+            viewModelScope.launch {
+                repository.deleteWorkspace(workspace.id)
+            }
         }
     }
 
     fun undoDeleteWorkspace() {
-        lastDeletedWorkspace?.let {
+        lastDeletedWorkspace?.let { workspace ->
             if (lastDeletedWorkspaceIndex != -1) {
-                _workspaces.add(lastDeletedWorkspaceIndex, it)
+                _workspaces.add(lastDeletedWorkspaceIndex, workspace)
+                
+                viewModelScope.launch {
+                    // Attempt to restore. Note: This creates a fresh workspace with the same basic info
+                    repository.createWorkspace(workspace.id, workspace.name, workspace.password)
+                }
+
                 lastDeletedWorkspace = null
                 lastDeletedWorkspaceIndex = -1
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        listenerRegistration?.remove()
     }
 }
