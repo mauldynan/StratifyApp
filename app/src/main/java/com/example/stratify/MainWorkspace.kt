@@ -10,19 +10,32 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import com.example.stratify.ui.workspace.WorkspaceNavHost
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.stratify.ui.workspace.CreateWorkspaceScreen
+import com.example.stratify.ui.workspace.JoinWorkspaceScreen
+import com.example.stratify.ui.workspace.WorkspaceDetailScreen
+import com.example.stratify.ui.workspace.WorkspaceListScreen
 import com.example.stratify.ui.workspace.WorkspaceScreen
 import com.example.stratify.view.profile.SharedViewModel
 
+// --- Colors ---
 private val maroonPrimary = Color(0xFF800000)
 private val textYellow = Color(0xFFFFEB3B)
 private val goldAccent = Color(0xFFEBC05C)
 
+/**
+ * Main composable for the Workspace section. This is the entry point from MainActivity's NavHost.
+ */
 @Composable
 fun MainWorkspaceScreen(viewModel: SharedViewModel) {
     val startDestination = if (viewModel.workspaces.isEmpty()) {
@@ -70,7 +83,6 @@ private fun WorkspaceNavHost(
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
-
         composable(WorkspaceScreen.Start.route) {
             Column(
                 modifier = Modifier
@@ -112,7 +124,6 @@ private fun WorkspaceNavHost(
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
-
         composable(WorkspaceScreen.CreateWorkspace.route) {
             CreateWorkspaceScreen(
                 onWorkspaceCreated = { name, code, password ->
@@ -136,6 +147,7 @@ private fun WorkspaceNavHost(
                 onBackPressed = { navController.navigateUp() }
             )
         }
+
         composable(WorkspaceScreen.WorkspaceList.route) {
             WorkspaceListScreen(
                 viewModel = viewModel,
@@ -150,6 +162,7 @@ private fun WorkspaceNavHost(
                 }
             )
         }
+
         composable(
             route = WorkspaceScreen.WorkspaceDetail.route,
             arguments = WorkspaceScreen.WorkspaceDetail.navArguments
@@ -163,6 +176,7 @@ private fun WorkspaceNavHost(
         }
     }
 }
+
 @Composable
 fun WorkspaceOptionCard(
     title: String,

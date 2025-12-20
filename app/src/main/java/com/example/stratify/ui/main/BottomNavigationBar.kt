@@ -10,8 +10,10 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 
 @Composable
 fun BottomNavigationBar(navController: NavController) {
@@ -55,4 +57,11 @@ sealed class NavigationItem(var route: String, var icon: androidx.compose.ui.gra
     object Dashboard : NavigationItem("dashboard", Icons.Default.Home, "Dashboard")
     object Scrum : NavigationItem("scrum", Icons.Default.Task, "Scrum")
     object MainWorkspace : NavigationItem("main_workspace", Icons.Default.Create, "Workspace")
+}
+
+@Preview(showBackground = true)
+@Composable
+fun BottomNavigationBarPreview() {
+    val navController = rememberNavController()
+    BottomNavigationBar(navController = navController)
 }
