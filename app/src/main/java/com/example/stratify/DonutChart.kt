@@ -141,21 +141,21 @@ fun DonutChart(
         Spacer(modifier = Modifier.width(8.dp))
 
         // --- BAGIAN LEGENDA (Teks Samping) ---
-        Column {
-            Text(
-                text = "${positivePercent.toInt()}% Positive",
-                color = positiveColor,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(-2.dp))
-            Text(
-                text = "${negativePercent.toInt()}% Negative",
-                color = negativeColor,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
+//        Column {
+//            Text(
+//                text = "${positivePercent.toInt()}% Positive",
+//                color = positiveColor,
+//                fontSize = 10.sp,
+//                fontWeight = FontWeight.Bold
+//            )
+//            Spacer(modifier = Modifier.height(-2.dp))
+//            Text(
+//                text = "${negativePercent.toInt()}% Negative",
+//                color = negativeColor,
+//                fontSize = 10.sp,
+//                fontWeight = FontWeight.Bold
+//            )
+//        }
     }
 }
 
