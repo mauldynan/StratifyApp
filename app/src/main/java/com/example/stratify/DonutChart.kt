@@ -118,18 +118,21 @@ fun DonutChart(
             }
 
             // Teks Angka di Tengah Lingkaran
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.offset(y = 4.dp) // Turunkan sedikit ke tengah
+            ) {
                 Text(
                     text = totalReviews.toString(),
-                    fontSize = 12.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
                     textAlign = TextAlign.Center
                 )
                 Text(
                     text = "Total Review",
-                    modifier = Modifier.offset(y = (-4).dp),
-                    fontSize = 8.sp,
+                    modifier = Modifier.offset(y = (-8).dp),
+                    fontSize = 6.sp,
                     color = Color.Gray,
                     textAlign = TextAlign.Center
                 )
@@ -138,21 +141,21 @@ fun DonutChart(
         Spacer(modifier = Modifier.width(8.dp))
 
         // --- BAGIAN LEGENDA (Teks Samping) ---
-        Column {
-            Text(
-                text = "${positivePercent.toInt()}% Positive",
-                color = positiveColor,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "${negativePercent.toInt()}% Negative",
-                color = negativeColor,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
+//        Column {
+//            Text(
+//                text = "${positivePercent.toInt()}% Positive",
+//                color = positiveColor,
+//                fontSize = 10.sp,
+//                fontWeight = FontWeight.Bold
+//            )
+//            Spacer(modifier = Modifier.height(-2.dp))
+//            Text(
+//                text = "${negativePercent.toInt()}% Negative",
+//                color = negativeColor,
+//                fontSize = 10.sp,
+//                fontWeight = FontWeight.Bold
+//            )
+//        }
     }
 }
 

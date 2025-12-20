@@ -1,5 +1,6 @@
 package com.example.stratify
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -8,10 +9,14 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
 import com.example.stratify.ui.dashboard.DashboardScreen
 import com.example.stratify.ui.full_analysis.FullAnalysisScreen
@@ -29,7 +34,7 @@ sealed class Screen(val route: String) {
     object Scrum : Screen("scrum")
     object MainWorkspace : Screen("main_workspace")
     object ProfileOptions : Screen("profile_options")
-    object ProfileEdit : Screen("profile_edit")
+    object EditProfile : Screen("edit_profile")
     object Login : Screen("login")
 }
 
@@ -53,8 +58,22 @@ fun AppNavigation(viewModel: SharedViewModel) {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    // Hide BottomBar on specific screens
+    val showBottomBar = currentRoute !in listOf(
+        Screen.ProfileOptions.route,
+        Screen.EditProfile.route,
+        Screen.Login.route
+    )
+
     Scaffold(
-        bottomBar = { BottomNavigationBar(navController = navController) }
+        bottomBar = {
+            if (showBottomBar) {
+                BottomNavigationBar(navController = navController)
+            }
+        }
     ) { innerPadding ->
         NavHost(
             navController = navController,
@@ -62,7 +81,7 @@ fun AppNavigation(viewModel: SharedViewModel) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Dashboard.route) {
-                DashboardScreen(navController = navController)
+                DashboardScreen(navController = navController, sharedViewModel = viewModel)
             }
 
             composable(Screen.FullAnalysis.route) {
@@ -80,19 +99,31 @@ fun AppNavigation(viewModel: SharedViewModel) {
                 MainWorkspaceScreen(viewModel = viewModel)
             }
 
-            composable(Screen.ProfileOptions.route) {
+            // Change to dialog to allow transparent background showing the Dashboard
+            dialog(
+                route = Screen.ProfileOptions.route,
+                dialogProperties = DialogProperties(
+                    usePlatformDefaultWidth = false // Make dialog full screen
+                )
+            ) {
                 ProfileOptionsScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onEditProfileClicked = { navController.navigate(Screen.ProfileEdit.route) },
+                    onEditProfileClicked = { navController.navigate(Screen.EditProfile.route) },
                     onLogoutClicked = {
                         auth.signOut()
                         Toast.makeText(context, "Logged out", Toast.LENGTH_SHORT).show()
+                        
+                        // Navigate to LoginActivity and clear task
+                        val intent = Intent(context, LoginActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        context.startActivity(intent)
                     }
                 )
             }
 
-            composable(Screen.ProfileEdit.route) {
+            composable(Screen.EditProfile.route) {
                 ProfileEditScreen(
+                    sharedViewModel = viewModel,
                     onNavigateBack = { navController.popBackStack() },
                     onProfileUpdated = { name, _ ->
                         Toast.makeText(context, "Welcome back, $name", Toast.LENGTH_SHORT).show()

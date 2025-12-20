@@ -1,334 +1,332 @@
 package com.example.stratify.ui.full_analysis
 
 import android.graphics.Color as AndroidColor
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.fragment.app.Fragment
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.findNavController
 import com.example.stratify.DonutChart
+import com.example.stratify.R
+import com.example.stratify.ui.theme.MaroonPrimary
+import com.example.stratify.ui.theme.StratifyTheme
 import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
-import androidx.compose.ui.res.painterResource
-import androidx.compose.foundation.Image
-import com.example.stratify.R
-
-
-
-// --- Colors ---
-private val maroonPrimary = Color(0xFF760000)
-private val textYellow = Color(0xFFF6C761)
-private val backgroundLight = Color(0xFFF0F0F0)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullAnalysisScreen(navController: NavController, onBackPressed: () -> Unit) {
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "Full Analysis",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = textYellow
-                    )
-                },
+            TopAppBar(
+                title = { Text("Full Analysis", fontWeight = FontWeight.Bold, color = colorResource(id = R.color.app_yellow) ) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = textYellow)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = maroonPrimary
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaroonPrimary,
+                    navigationIconContentColor = colorResource(id = R.color.app_yellow)
                 )
             )
         }
     ) { paddingValues ->
+        // Column Utama (Pengganti ScrollView di XML)
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color.White)
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .background(backgroundLight)
                 .padding(16.dp)
         ) {
-            AppSummaryCard(navController)
-            Spacer(modifier = Modifier.height(20.dp))
-            SentimentAnalysisChart()
-            Spacer(modifier = Modifier.height(16.dp))
-            DominantKeywordsSection()
-            Spacer(modifier = Modifier.height(16.dp))
-            ReviewFilterButtons()
-            Spacer(modifier = Modifier.height(12.dp))
-            ReviewsSection()
-        }
-    }
-}
 
-@Composable
-fun AppSummaryCard(navController: NavController) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Shopee Logo
-            Image(
-                painter = painterResource(id = R.drawable.shopee_logo),
-                contentDescription = "Shopee Logo",
-                modifier = Modifier.size(70.dp)
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center
+            // --- BAGIAN 1: SHOPEE CARD & DONUT CHART ---
+            Card(
+                modifier = Modifier.fillMaxWidth().height(150.dp),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Text("Shopee", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text("4.6/5 Bintang", color = Color.Gray, fontSize = 12.sp)
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.shopee_logo),
+                        contentDescription = "Shopee Logo",
+                        modifier = Modifier.size(80.dp).padding(start = 12.dp),
+                        contentScale = ContentScale.Fit
+                    )
+
+                    Column(
+                        modifier = Modifier.padding(start = 8.dp, end = 12.dp)
+                    ) {
+                        Text(
+                            text = "Shopee",
+                            color = Color.Black,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "4.6 / 5 Bintang",
+                            color = Color.DarkGray,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Spacer(Modifier.weight(1f))
+
+                    Column(
+                        modifier = Modifier.padding(end = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        DonutChart(
+                            modifier = Modifier.size(width = 140.dp, height = 70.dp),
+                            positivePercent = 70f,
+                            negativePercent = 30f,
+                            totalReviews = 1200
+                        )
+                    }
+                }
             }
 
-            // DonutChart
-            Box(
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // --- BAGIAN 2: SENTIMENT CHART (MPAndroidChart) ---
+            Text("Sentiment Analysis Chart", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
-                    .size(140.dp) // ukuran besar sesuai keinginan
-                    .alignBy { 70 } // pastikan rata vertikal dengan logo (70 = tinggi logo)
-                    .clickable { navController.navigate("full_analysis_detail") },
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .height(220.dp)
             ) {
-                DonutChart(
-                    positivePercent = 70f,
-                    negativePercent = 30f,
-                    totalReviews = 1200,
-                    modifier = Modifier.fillMaxSize()
+                // Menggunakan AndroidView agar bisa pakai library lama (MPAndroidChart) di Compose
+                AndroidView(
+                    factory = { context ->
+                        LineChart(context).apply {
+                            description.isEnabled = false
+                            setDrawGridBackground(false)
+                            axisRight.isEnabled = false
+                            xAxis.position = XAxis.XAxisPosition.BOTTOM
+                            xAxis.setDrawGridLines(false)
+                            axisLeft.textColor = AndroidColor.DKGRAY
+                            xAxis.textColor = AndroidColor.DKGRAY
+                            legend.isEnabled = true
+                        }
+                    },
+                    update = { lineChart ->
+                        updateLineChartData(lineChart)
+                    },
+                    modifier = Modifier.fillMaxSize().padding(8.dp)
                 )
             }
-        }
 
-    }
-}
+            Spacer(modifier = Modifier.height(16.dp))
 
-
-@Composable
-fun SentimentAnalysisChart() {
-    Column {
-        Text("Sentiment Analysis Chart", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(250.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            AndroidView(
-                factory = { context ->
-                    LineChart(context).apply {
-                        description.isEnabled = false
-                        legend.isEnabled = true
-                        xAxis.position = XAxis.XAxisPosition.BOTTOM
-                        axisRight.isEnabled = false
-
-                        val entries = listOf(
-                            Entry(1f, 3f),
-                            Entry(2f, 4f),
-                            Entry(3f, 2f),
-                            Entry(4f, 5f),
-                            Entry(5f, 4.5f)
-                        )
-                        val dataSet = LineDataSet(entries, "Sentiment").apply {
-                            color = AndroidColor.RED
-                            valueTextColor = AndroidColor.BLACK
-                            lineWidth = 2f
-                            setDrawCircles(true)
-                        }
-                        this.data = LineData(dataSet)
-                        this.invalidate()
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
+            // --- BAGIAN 3: DOMINANT KEYWORDS ---
+            Text(
+                text = "Dominant Keywords",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF800000), // Warna Maroon
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
-        }
-    }
-}
 
-@Composable
-fun DominantKeywordsSection() {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            "Dominant Keywords",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = maroonPrimary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            KeywordCard(
-                title = "Positif",
-                keywords = listOf("Good promo", "Free shipping", "Nice app"),
-                color = Color(0xFF2E7D32),
-                backgroundColor = Color(0xFFE8F5E9),
-                modifier = Modifier.weight(1f)
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                // Kartu Keyword Positif
+                KeywordCard(
+                    title = "Positif",
+                    color = Color(0xFF4CAF50), // Hijau
+                    bgColor = Color(0xFFE8F9EE),
+                    items = listOf("Good promo", "Free shipping", "Nice app"),
+                    modifier = Modifier.weight(1f).padding(end = 6.dp)
+                )
+
+                // Kartu Keyword Negatif
+                KeywordCard(
+                    title = "Negatif",
+                    color = Color(0xFFF44336), // Merah
+                    bgColor = Color(0xFFFFF1F1),
+                    items = listOf("Bug", "Lambat", "Sulit digunakan"),
+                    modifier = Modifier.weight(1f).padding(start = 6.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- BAGIAN 4: FILTER BUTTONS ---
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterButton("Latest", Modifier.weight(1f))
+                FilterButton("Positive", Modifier.weight(1f))
+                FilterButton("Negative", Modifier.weight(1f))
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // --- BAGIAN 5: LIST REVIEWS ---
+            Text("Reviews", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ReviewItem(
+                name = "Budi S. - 12 Jan 2024",
+                comment = "The app makes work very easy",
+                rating = "⭐⭐⭐⭐⭐ 5/5"
             )
-            KeywordCard(
-                title = "Negatif",
-                keywords = listOf("Bug", "Lambat", "Sulit digunakan"),
-                color = Color(0xFFD32F2F),
-                backgroundColor = Color(0xFFFFEBEE),
-                modifier = Modifier.weight(1f)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ReviewItem(
+                name = "Siti N. - 10 Jan 2024",
+                comment = "The app is interesting, lots of great features!",
+                rating = "⭐ 1/5"
             )
+
+            // Tambahan padding bawah agar tidak kepotong
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
 
+// ==========================================
+// SUB-COMPOSABLES (Komponen Kecil)
+// ==========================================
+
 @Composable
-fun KeywordCard(title: String, keywords: List<String>, color: Color, backgroundColor: Color, modifier: Modifier = Modifier) {
+fun KeywordCard(title: String, color: Color, bgColor: Color, items: List<String>, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        colors = CardDefaults.cardColors(containerColor = bgColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = modifier
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = color)
+            Text(title, fontWeight = FontWeight.Bold, color = color, fontSize = 15.sp)
             Spacer(modifier = Modifier.height(6.dp))
             Box(modifier = Modifier
                 .width(30.dp)
                 .height(2.dp)
                 .background(color))
             Spacer(modifier = Modifier.height(8.dp))
-            keywords.forEach { keyword ->
-                Text("• $keyword", fontSize = 13.sp, lineHeight = 18.sp, color = Color.Black)
+            items.forEach { item ->
+                Text("• $item", fontSize = 13.sp, lineHeight = 20.sp, color = Color.Black)
             }
         }
-    }
-}
-
-@Composable
-fun ReviewFilterButtons() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        FilterButton("Latest", Modifier.weight(1f))
-        FilterButton("Positive", Modifier.weight(1f))
-        FilterButton("Negative", Modifier.weight(1f))
     }
 }
 
 @Composable
 fun FilterButton(text: String, modifier: Modifier = Modifier) {
     Button(
-        onClick = { },
-        modifier = modifier.height(35.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = maroonPrimary),
-        shape = RoundedCornerShape(8.dp)
+        onClick = {},
+        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+        shape = RoundedCornerShape(8.dp),
+        contentPadding = PaddingValues(0.dp),
+        modifier = modifier.height(35.dp)
     ) {
-        Text(text, fontSize = 11.sp, color = textYellow)
+        Text(text, fontSize = 10.sp, color = Color.White)
     }
 }
 
 @Composable
-fun ReviewsSection() {
-    Column {
-        Text("Reviews", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        ReviewCard(
-            author = "Budi S.",
-            date = "12 Jan 2024",
-            reviewText = "The app makes work very easy",
-            rating = 5,
-            initials = "B"
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        ReviewCard(
-            author = "Siti N.",
-            date = "10 Jan 2024",
-            reviewText = "The app is interesting, lots of great features!",
-            rating = 1,
-            initials = "S"
-        )
-    }
-}
-
-@Composable
-fun ReviewCard(author: String, date: String, reviewText: String, rating: Int, initials: String) {
+fun ReviewItem(name: String, comment: String, rating: String) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.Top) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color.Gray),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(initials, color = Color.White, fontWeight = FontWeight.Bold)
-            }
+        Row(modifier = Modifier.padding(10.dp)) {
+            // Pastikan kamu punya gambar 'ic_acc' di res/drawable
+            Image(
+                painter = painterResource(id = R.drawable.ic_acc),
+                contentDescription = "User Icon",
+                modifier = Modifier.size(40.dp)
+            )
             Spacer(modifier = Modifier.width(8.dp))
             Column {
-                Text("$author - $date", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(reviewText, fontSize = 13.sp, lineHeight = 18.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    repeat(5) { index ->
-                        val starColor = if (index < rating) maroonPrimary else Color.LightGray
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = starColor,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        "$rating/5",
-                        color = maroonPrimary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text(comment, fontSize = 13.sp, modifier = Modifier.padding(vertical = 4.dp))
+                Text(rating, fontSize = 12.sp, color = Color(0xFF800000))
             }
         }
+    }
+}
+
+// ==========================================
+// LOGIC HELPER UNTUK CHART (MPAndroidChart)
+// ==========================================
+
+fun updateLineChartData(lineChart: LineChart) {
+    val positiveEntries = listOf(Entry(1f, 1f), Entry(2f, 2f), Entry(3f, 1.5f), Entry(4f, 2.5f), Entry(5f, 3f))
+    val negativeEntries = listOf(Entry(1f, 0.5f), Entry(2f, 1f), Entry(3f, 0.8f), Entry(4f, 1.5f), Entry(5f, 2f))
+
+    val positiveSet = LineDataSet(positiveEntries, "Positive").apply {
+        color = AndroidColor.parseColor("#4CAF50")
+        lineWidth = 2f
+        setCircleColor(AndroidColor.parseColor("#4CAF50"))
+        mode = LineDataSet.Mode.CUBIC_BEZIER
+        setDrawValues(false)
+    }
+
+    val negativeSet = LineDataSet(negativeEntries, "Negative").apply {
+        color = AndroidColor.parseColor("#F44336")
+        lineWidth = 2f
+        setCircleColor(AndroidColor.parseColor("#F44336"))
+        mode = LineDataSet.Mode.CUBIC_BEZIER
+        setDrawValues(false)
+    }
+
+    lineChart.data = LineData(positiveSet, negativeSet)
+    lineChart.invalidate()
+}
+
+@Preview(showBackground = true)
+@Composable
+fun FullAnalysisScreenPreview() {
+    StratifyTheme {
+        FullAnalysisScreen(navController = rememberNavController(), onBackPressed = {})
     }
 }

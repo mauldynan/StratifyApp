@@ -6,7 +6,6 @@ import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
@@ -70,37 +70,29 @@ fun ForgotPasswordScreen(
 ) {
     var email by remember { mutableStateOf("") }
 
-    val glowColor = Color(0xFFFFE57F)
-
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize()) {
 
             // TOP glow
-            Box(
+            Image(
+                painter = painterResource(id = R.drawable.elips),
+                contentDescription = null,
                 modifier = Modifier
-                    .size(600.dp)
+                    .size(800.dp)
                     .align(Alignment.TopEnd)
                     .offset(x = 200.dp, y = (-200).dp)
-                    .background(
-                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
-                            colors = listOf(glowColor.copy(alpha = 0.5f), Color.Transparent),
-                            radius = 1000f
-                        )
-                    )
+                    .alpha(0.3f)
             )
 
             // BOTTOM glow
-            Box(
+            Image(
+                painter = painterResource(id = R.drawable.elips),
+                contentDescription = null,
                 modifier = Modifier
-                    .size(600.dp)
+                    .size(800.dp)
                     .align(Alignment.BottomStart)
                     .offset(x = (-200).dp, y = 200.dp)
-                    .background(
-                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
-                            colors = listOf(glowColor.copy(alpha = 0.5f), Color.Transparent),
-                            radius = 1000f
-                        )
-                    )
+                    .alpha(0.3f)
             )
 
             Column(
