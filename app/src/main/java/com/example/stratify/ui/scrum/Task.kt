@@ -9,7 +9,8 @@ data class Task(
     val description: String,
     val estimation: String,
     val deadline: String,
-    val status: TaskStatus
+    val status: TaskStatus,
+    val remoteId: String? = null
 )
 
 /**
