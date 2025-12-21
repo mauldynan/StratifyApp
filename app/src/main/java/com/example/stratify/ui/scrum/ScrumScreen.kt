@@ -2,6 +2,7 @@ package com.example.stratify.ui.scrum
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,6 +34,7 @@ private val maroonPrimary = Color(0xFF8B0000)
 private val textYellow = Color(0xFFF6C761)
 private val lightGray = Color(0xFFF0F0F0)
 private val pureWhite = Color(0xFFFFFFFF)
+private val lightBg = Color(0xFFF8F9FB)
 
 // --- Helper Logic for Auto Estimation ---
 fun calculateEstimation(deadlineString: String): String {
@@ -124,26 +126,26 @@ fun ScrumScreen(viewModel: ScrumViewModel = viewModel()) {
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = maroonPrimary)
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddTaskDialog = true }, containerColor = maroonPrimary) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = textYellow)
-            }
-        },
-        containerColor = pureWhite
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState, modifier = Modifier.navigationBarsPadding().padding(bottom = 98.dp)) },
+        containerColor = lightBg
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .background(lightBg)
+            .padding(paddingValues)
+            .padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.height(16.dp))
             Text("SPRINT #${viewModel.activeTaskCount} • ACTIVE", color = textYellow, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(modifier = Modifier.height(12.dp))
             ProgressCard(progress = viewModel.progressPercentage)
             Spacer(modifier = Modifier.height(24.dp))
-            TaskSectionHeader(taskCount = filteredTasks.size, onFilterSelected = { selectedStatusFilter = it })
+            TaskSectionHeader(taskCount = filteredTasks.size, onFilterSelected = { selectedStatusFilter = it }, onAddClick = { showAddTaskDialog = true })
             Spacer(modifier = Modifier.height(16.dp))
 
             LazyColumn(
+                modifier = Modifier.fillMaxSize().navigationBarsPadding(),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
+                contentPadding = PaddingValues(bottom = 140.dp)
             ) {
                 items(filteredTasks, key = { it.id }) { task ->
                     TaskItem(
@@ -351,7 +353,7 @@ fun ProgressCard(progress: Int) {
 }
 
 @Composable
-fun TaskSectionHeader(taskCount: Int, onFilterSelected: (TaskStatus?) -> Unit) {
+fun TaskSectionHeader(taskCount: Int, onFilterSelected: (TaskStatus?) -> Unit, onAddClick: () -> Unit) {
     var showSortMenu by remember { mutableStateOf(false) }
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -362,18 +364,28 @@ fun TaskSectionHeader(taskCount: Int, onFilterSelected: (TaskStatus?) -> Unit) {
             }
         }
         Box {
-            Button(
-                onClick = { showSortMenu = true },
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFA726).copy(alpha = 0.1f),
-                    contentColor = maroonPrimary
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
-            ) {
-                Icon(Icons.Default.FilterList, null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Filter", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(
+                    onClick = { showSortMenu = true },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFA726).copy(alpha = 0.1f),
+                        contentColor = maroonPrimary
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                ) {
+                    Icon(Icons.Default.FilterList, null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Filter", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = maroonPrimary,
+                    modifier = Modifier.size(40.dp).clickable { onAddClick() }
+                ) {
+                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, contentDescription = "Add Task", tint = textYellow, modifier = Modifier.size(20.dp)) }
+                }
             }
             DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }, modifier = Modifier.background(pureWhite)) {
                 DropdownMenuItem(text = { Text("All") }, onClick = { onFilterSelected(null); showSortMenu = false })
