@@ -23,6 +23,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.auth.FirebaseAuth
+import android.util.Log
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -71,17 +75,79 @@ class ScrumViewModel : ViewModel() {
     val tasks: List<Task> = _tasks
     private var lastDeletedTask: Pair<Int, Task>? = null
 
+    private val repo = ScrumRepository()
+    private var listener: ListenerRegistration? = null
+
+    private val auth = FirebaseAuth.getInstance()
+    private val authListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+        val user = firebaseAuth.currentUser
+        if (user != null) {
+            Log.d("SCRUM_VM", "User logged in: ${user.uid}, attaching listener")
+            // start listening to remote changes when user is present
+            if (listener == null) {
+                listener = repo.listenToUserTasks({ list ->
+                    _tasks.clear()
+                    _tasks.addAll(list)
+                }, { e -> Log.w("SCRUM_VM", "listen error", e) })
+            }
+        } else {
+            Log.d("SCRUM_VM", "User logged out, clearing tasks and removing listener")
+            // remove listener and clear local tasks when logged out
+            listener?.remove()
+            listener = null
+            _tasks.clear()
+        }
+    }
+
+    init {
+        // attach auth listener and if user already logged in, start listening
+        auth.addAuthStateListener(authListener)
+        auth.currentUser?.let {
+            listener = repo.listenToUserTasks({ list ->
+                _tasks.clear()
+                _tasks.addAll(list)
+            }, { e -> Log.w("SCRUM_VM", "listen error", e) })
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        listener?.remove()
+        auth.removeAuthStateListener(authListener)
+    }
+
     val activeTaskCount: Int get() = _tasks.count { it.status != TaskStatus.DONE }
     val progressPercentage: Int get() = if (_tasks.isEmpty()) 0 else (_tasks.count { it.status == TaskStatus.DONE } * 100 / _tasks.size)
 
     fun addTask(name: String, description: String, estimation: String, deadline: String) {
-        val newId = (_tasks.maxOfOrNull { it.id } ?: 0) + 1
-        _tasks.add(Task(newId, name, description, estimation, deadline, TaskStatus.TODO))
+        viewModelScope.launch {
+            val tempId = (_tasks.maxOfOrNull { it.id } ?: 0) + 1
+            val localTask = Task(tempId, name, description, estimation, deadline, TaskStatus.TODO)
+            // optimistically add local item (without remoteId) so UI responds immediately
+            _tasks.add(localTask)
+            val res = repo.addTaskRemote(localTask)
+            res.onSuccess { created ->
+                // replace the optimistic item with one that has remoteId and stable id (use hash of remoteId)
+                val idx = _tasks.indexOfFirst { it === localTask || it.id == localTask.id }
+                if (idx != -1) {
+                    val stableId = created.remoteId?.hashCode() ?: created.id
+                    _tasks[idx] = created.copy(id = stableId)
+                }
+            }.onFailure {
+                // failed to persist: leave local item or remove? keep for now
+            }
+        }
     }
 
     fun updateTask(updatedTask: Task) {
+        // update local immediately
         val index = _tasks.indexOfFirst { it.id == updatedTask.id }
         if (index != -1) _tasks[index] = updatedTask
+
+        // persist remote if we have remoteId
+        viewModelScope.launch {
+            updatedTask.remoteId?.let { repo.updateTaskRemote(updatedTask) }
+        }
     }
 
     fun deleteTask(task: Task) {
@@ -89,11 +155,29 @@ class ScrumViewModel : ViewModel() {
         if (index != -1) {
             lastDeletedTask = Pair(index, task)
             _tasks.removeAt(index)
+            // if remote exists, delete from firestore
+            task.remoteId?.let { rid ->
+                viewModelScope.launch { repo.deleteTaskRemote(rid) }
+            }
         }
     }
 
     fun undoDelete() {
-        lastDeletedTask?.let { (index, task) -> _tasks.add(index, task) }
+        lastDeletedTask?.let { (index, task) ->
+            // re-add locally
+            _tasks.add(index.coerceAtMost(_tasks.size), task)
+            // re-add remotely (will create new doc)
+            viewModelScope.launch {
+                val res = repo.addTaskRemote(task.copy(remoteId = null))
+                res.onSuccess { created ->
+                    // update local entry to reference new remote id
+                    val idx = _tasks.indexOfFirst { it.id == task.id }
+                    if (idx != -1) {
+                        _tasks[idx] = created.copy(id = created.remoteId?.hashCode() ?: created.id)
+                    }
+                }
+            }
+        }
     }
 }
 
