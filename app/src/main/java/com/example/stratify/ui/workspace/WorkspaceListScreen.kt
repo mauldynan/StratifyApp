@@ -69,9 +69,9 @@ fun WorkspaceListContent(
     val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState, modifier = Modifier.navigationBarsPadding().padding(bottom = 98.dp)) },
         floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End) {
+            Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(bottom = 98.dp)) {
                 // Dropdown diletakkan di atas FAB agar tidak terhalang
                 DropdownMenu(
                     expanded = showMenu,
@@ -178,7 +178,7 @@ fun WorkspaceListContent(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 100.dp)
+                    contentPadding = PaddingValues(bottom = 150.dp)
                 ) {
                     items(filteredWorkspaces, key = { it.id }) { workspace ->
                         WorkspaceCard(

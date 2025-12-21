@@ -69,7 +69,7 @@ fun AppRoot(viewModel: SharedViewModel) {
         Screen.ProfileOptions.route,
         Screen.EditProfile.route,
         Screen.Login.route
-    ) && !viewModel.isCompareMode.value
+    )
 
     // ❌ Scaffold TIDAK punya bottomBar
     Scaffold(

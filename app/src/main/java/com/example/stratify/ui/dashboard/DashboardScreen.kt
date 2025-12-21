@@ -39,11 +39,9 @@ import androidx.navigation.compose.rememberNavController
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.example.stratify.DonutChart
-import androidx.lifecycle.viewmodel.compose.viewModel as lifecycleViewModel
-import com.example.stratify.compare.DashboardViewModel
-import com.example.stratify.compare.Review
 import com.example.stratify.R
 import com.example.stratify.Screen
+import com.example.stratify.view.profile.EcommerceAppData
 import com.example.stratify.view.profile.SharedViewModel
 import com.google.firebase.auth.FirebaseAuth
 
@@ -53,18 +51,6 @@ private val goldAccent = Color(0xFFF6C761)
 private val positiveGreen = Color(0xFF10B981)
 private val negativeRed = Color(0xFFEF4444)
 private val lightBg = Color(0xFFF8F9FB)
-
-// Data class untuk database simulasi
-data class EcommerceAppData(
-    val id: Int,
-    val name: String,
-    val logo: Int,
-    val rating: String,
-    val reviews: String,
-    val pos: Int,
-    val neg: Int,
-    val latestComments: List<Pair<String, String>> // Nama User dan Komentar
-)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalGlideComposeApi::class)
 @Composable
@@ -80,28 +66,7 @@ fun DashboardScreen(navController: NavController, sharedViewModel: SharedViewMod
     var compareB by remember { mutableStateOf<EcommerceAppData?>(null) }
     var isCompareViewActive by remember { mutableStateOf(false) }
 
-    // ViewModel to fetch latest reviews from Firestore
-    val compareViewModel: DashboardViewModel = lifecycleViewModel()
-
-    val ecommerceApps = remember {
-        listOf(
-            EcommerceAppData(1, "Shopee", R.drawable.shopee_logo, "4.8", "1.2M", 850, 150, listOf(
-                "Budi S." to "Love the free shipping vouchers!",
-                "Siti A." to "Items arrived fast and as described.",
-                "Andi W." to "App feels a bit laggy sometimes."
-            )),
-            EcommerceAppData(2, "Tokopedia", R.drawable.tokopedia_logo, "4.7", "900K", 780, 220, listOf(
-                "Rina K." to "Everything is original in Official Stores.",
-                "Dedi H." to "Customer service is very responsive.",
-                "Lina M." to "Update frequency is a bit too high."
-            )),
-            EcommerceAppData(3, "Tiktok", R.drawable.tiktok_logo, "4.5", "600K", 600, 400, listOf(
-                "Eko P." to "Great monthly discounts available.",
-                "Ani R." to "Very secure packaging.",
-                "Zaki F." to "Shipping takes too long."
-            ))
-        )
-    }
+    val ecommerceApps = sharedViewModel.ecommerceApps
 
     val filteredApps = ecommerceApps.filter {
         it.name.contains(searchQuery, ignoreCase = true)
@@ -151,43 +116,18 @@ fun DashboardScreen(navController: NavController, sharedViewModel: SharedViewMod
                 .background(lightBg)
                 .verticalScroll(rememberScrollState())
                 .padding(paddingValues) // Padding dari TopAppBar
-                .padding(top = 16.dp, start = 20.dp, end = 20.dp)
-                .navigationBarsPadding() // respect system navigation bars if present
-                // Add explicit bottom padding to avoid being covered by the app's floating BottomNavigationBar.
-                // BottomNavigationBar uses 80.dp height + 24.dp vertical padding (top+bottom) = 128.dp total.
-                .padding(bottom = 128.dp)
+                .navigationBarsPadding() // FIX: Menghindari navigasi sistem
+                .padding(top = 16.dp, start = 20.dp, end = 20.dp, bottom = 150.dp) // FIX: Padding bawah diperbesar
         ) {
             if (isCompareViewActive && compareA != null && compareB != null) {
-                // Load remote reviews when entering compare mode
-                LaunchedEffect(compareA?.id, compareB?.id, isCompareViewActive) {
-                    compareViewModel.loadReviews()
-                }
-
-                // Map app names to review lists fetched by the view model
-                val appAReviews: List<Review> = when (compareA?.name?.lowercase()) {
-                    "shopee" -> compareViewModel.shopeeReviews.value
-                    "tokopedia" -> compareViewModel.tokopediaReviews.value
-                    "tiktok" -> compareViewModel.tiktokReviews.value
-                    else -> emptyList()
-                }
-
-                val appBReviews: List<Review> = when (compareB?.name?.lowercase()) {
-                    "shopee" -> compareViewModel.shopeeReviews.value
-                    "tokopedia" -> compareViewModel.tokopediaReviews.value
-                    "tiktok" -> compareViewModel.tiktokReviews.value
-                    else -> emptyList()
-                }
                 // --- TAMPILAN PERBANDINGAN ---
                 CompareViewContent(
                     appA = compareA!!,
                     appB = compareB!!,
-                    appAReviews = appAReviews,
-                    appBReviews = appBReviews,
                     onBack = {
                         isCompareViewActive = false
                         compareA = null
                         compareB = null
-                        sharedViewModel.isCompareMode.value = false
                     }
                 )
             } else {
@@ -267,7 +207,6 @@ fun DashboardScreen(navController: NavController, sharedViewModel: SharedViewMod
                             } else if (compareA?.id != app.id) {
                                 compareB = app
                                 isCompareViewActive = true
-                                sharedViewModel.isCompareMode.value = true
                             }
                         }
                     )
@@ -278,13 +217,7 @@ fun DashboardScreen(navController: NavController, sharedViewModel: SharedViewMod
 }
 
 @Composable
-fun CompareViewContent(
-    appA: EcommerceAppData,
-    appB: EcommerceAppData,
-    appAReviews: List<Review> = emptyList(),
-    appBReviews: List<Review> = emptyList(),
-    onBack: () -> Unit
-) {
+fun CompareViewContent(appA: EcommerceAppData, appB: EcommerceAppData, onBack: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -331,12 +264,11 @@ fun CompareViewContent(
                 Text("LATEST REVIEWS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 Spacer(Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // Render latest remote reviews (fallback to empty)
-                            appAReviews.take(3).forEach { review -> CompareCommentItem(review.userName, review.content) }
-                        }
-                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            appBReviews.take(3).forEach { review -> CompareCommentItem(review.userName, review.content) }
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        appA.latestComments.take(3).forEach { (user, comment) -> CompareCommentItem(user, comment) }
+                    }
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        appB.latestComments.take(3).forEach { (user, comment) -> CompareCommentItem(user, comment) }
                     }
                 }
             }

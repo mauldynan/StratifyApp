@@ -2,7 +2,9 @@ package com.example.stratify.ui.workspace
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Key
@@ -48,6 +50,7 @@ fun JoinWorkspaceScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -96,7 +99,7 @@ fun JoinWorkspaceScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(40.dp))
 
             Button(
                 onClick = { onWorkspaceJoined(codeInput, passwordInput) },
@@ -107,8 +110,6 @@ fun JoinWorkspaceScreen(
             ) {
                 Text("JOIN NOW", fontWeight = FontWeight.Black, color = goldAccent)
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

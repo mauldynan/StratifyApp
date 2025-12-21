@@ -1,5 +1,4 @@
 package com.example.stratify.ui.scrum
-import com.example.stratify.ui.dashboard.EcommerceAppData
 /**
  * Data model representing a single task in the Scrum board.
  */

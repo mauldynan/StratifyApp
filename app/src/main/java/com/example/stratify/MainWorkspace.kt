@@ -1,5 +1,7 @@
 package com.example.stratify
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +11,7 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.stratify.ui.workspace.CreateWorkspaceScreen
 import com.example.stratify.ui.workspace.JoinWorkspaceScreen
@@ -54,30 +58,40 @@ private fun WorkspaceAppContent(
     startDestination: String,
     viewModel: SharedViewModel
 ) {
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "Workspace",
-                        fontWeight = FontWeight.Bold,
-                        color = textYellow
+            if (currentRoute != WorkspaceScreen.CreateWorkspace.route &&
+                currentRoute != WorkspaceScreen.JoinWorkspace.route
+            ) {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            "Workspace",
+                            fontWeight = FontWeight.Bold,
+                            color = textYellow
+                        )
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = maroonPrimary
                     )
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = maroonPrimary
                 )
-            )
+            }
         },
         containerColor = lightGrayBg
     ) { innerPadding ->
-        val navController = rememberNavController()
-
         Box(modifier = Modifier.padding(innerPadding)) {
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
-                modifier = Modifier.fillMaxSize().padding(bottom = 150.dp) // FIX: Padding bawah diperbesar
+                modifier = Modifier.fillMaxSize(),
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None }
             ) {
                 composable(WorkspaceScreen.Start.route) {
                     StartWorkspaceUI(
@@ -94,7 +108,7 @@ private fun WorkspaceAppContent(
                                 popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
                             }
                         },
-                        onBackPressed = { navController.navigateUp() }
+                        onBackPressed = { navController.popBackStack() }
                     )
                 }
 
@@ -108,7 +122,7 @@ private fun WorkspaceAppContent(
                                 }
                             }
                         },
-                        onBackPressed = { navController.navigateUp() }
+                        onBackPressed = { navController.popBackStack() }
                     )
                 }
 
@@ -131,7 +145,7 @@ private fun WorkspaceAppContent(
                     WorkspaceDetailScreen(
                         viewModel = viewModel,
                         workspaceId = workspaceId,
-                        onBackPressed = { navController.navigateUp() }
+                        onBackPressed = { navController.popBackStack() }
                     )
                 }
             }
@@ -173,7 +187,7 @@ fun StartWorkspaceUI(
             iconContentColor = maroonPrimary,
             onClick = onJoinClick
         )
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(120.dp)) // Padding agar tidak tertutup nav
     }
 }
 
