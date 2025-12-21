@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.stratify.ui.theme.StratifyTheme
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -63,19 +62,7 @@ fun calculateEstimation(deadlineString: String): String {
     } catch (e: Exception) { "" }
 }
 
-// --- Data Classes ---
-enum class TaskStatus(val displayName: String) {
-    TODO("To Do"), IN_PROGRESS("In Progress"), TO_VERIFY("To Verify"), DONE("Done")
-}
-
-data class Task(
-    val id: Int,
-    var name: String,
-    var description: String,
-    var estimation: String,
-    var deadline: String,
-    var status: TaskStatus
-)
+// NOTE: Task and TaskStatus are now imported from Task.kt
 
 class ScrumViewModel : ViewModel() {
     private val _tasks = mutableStateListOf<Task>()
@@ -371,7 +358,7 @@ fun TaskSectionHeader(taskCount: Int, onFilterSelected: (TaskStatus?) -> Unit) {
             Text("All Tasks", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = maroonPrimary)
             Spacer(modifier = Modifier.width(8.dp))
             Surface(color = textYellow, shape = CircleShape, modifier = Modifier.size(24.dp)) {
-                Box(contentAlignment = Alignment.Center) { Text(taskCount.toString(), color = maroonPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                Box(contentAlignment = Alignment.Center) { Text("$taskCount", color = maroonPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             }
         }
         Box {
@@ -468,9 +455,11 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onTaskAdded: (String, String, S
 @Preview(showBackground = true)
 @Composable
 fun ScrumPreview() {
-    StratifyTheme {
-        val vm = ScrumViewModel()
-        vm.addTask("Final Polish", "White calendar background and large scale implemented.", "1 Day", "21 Dec 2025")
-        ScrumScreen(vm)
+    val vm = remember { ScrumViewModel() }
+    LaunchedEffect(Unit) {
+        if (vm.tasks.isEmpty()) {
+            vm.addTask("Final Polish", "White calendar background and large scale implemented.", "1 Day", "21 Dec 2025")
+        }
     }
+    ScrumScreen(vm)
 }

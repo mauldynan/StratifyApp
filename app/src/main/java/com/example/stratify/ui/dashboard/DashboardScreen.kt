@@ -39,13 +39,13 @@ import androidx.navigation.compose.rememberNavController
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.example.stratify.DonutChart
+import androidx.lifecycle.viewmodel.compose.viewModel as lifecycleViewModel
+import com.example.stratify.compare.DashboardViewModel
+import com.example.stratify.compare.Review
 import com.example.stratify.R
 import com.example.stratify.Screen
 import com.example.stratify.view.profile.SharedViewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.example.stratify.compare.DashboardViewModel
-import com.example.stratify.compare.Review
-
 
 // --- Optimized Colors ---
 private val maroonPrimary = Color(0xFF760000)
@@ -58,7 +58,6 @@ private val lightBg = Color(0xFFF8F9FB)
 data class EcommerceAppData(
     val id: Int,
     val name: String,
-    val firebaseKey: String,
     val logo: Int,
     val rating: String,
     val reviews: String,
@@ -70,34 +69,33 @@ data class EcommerceAppData(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalGlideComposeApi::class)
 @Composable
 fun DashboardScreen(navController: NavController, sharedViewModel: SharedViewModel = viewModel()) {
-    // FIX: Removed local drawer state, use Navigation instead
     val isPreview = LocalInspectionMode.current
     val initialPhotoUrl = if (isPreview) null else FirebaseAuth.getInstance().currentUser?.photoUrl
     val photoUri by sharedViewModel.photoUri.observeAsState(initialPhotoUrl)
 
-    // State untuk fitur pencarian
     var searchQuery by remember { mutableStateOf("") }
 
-    // State untuk Pin dan Compare
     var savedAppId by remember { mutableStateOf<Int?>(1) }
     var compareA by remember { mutableStateOf<EcommerceAppData?>(null) }
     var compareB by remember { mutableStateOf<EcommerceAppData?>(null) }
     var isCompareViewActive by remember { mutableStateOf(false) }
 
-    // Mock Database terintegrasi
+    // ViewModel to fetch latest reviews from Firestore
+    val compareViewModel: DashboardViewModel = lifecycleViewModel()
+
     val ecommerceApps = remember {
         listOf(
-            EcommerceAppData(1, "Shopee", "shopee", R.drawable.shopee_logo, "4.8", "1.2M", 850, 150, listOf(
+            EcommerceAppData(1, "Shopee", R.drawable.shopee_logo, "4.8", "1.2M", 850, 150, listOf(
                 "Budi S." to "Love the free shipping vouchers!",
                 "Siti A." to "Items arrived fast and as described.",
                 "Andi W." to "App feels a bit laggy sometimes."
             )),
-            EcommerceAppData(2, "Tokopedia", "tokopedia", R.drawable.tokopedia_logo, "4.7", "900K", 780, 220, listOf(
+            EcommerceAppData(2, "Tokopedia", R.drawable.tokopedia_logo, "4.7", "900K", 780, 220, listOf(
                 "Rina K." to "Everything is original in Official Stores.",
                 "Dedi H." to "Customer service is very responsive.",
                 "Lina M." to "Update frequency is a bit too high."
             )),
-            EcommerceAppData(3, "Tiktok", "tiktok",R.drawable.tiktok_logo, "4.5", "600K", 600, 400, listOf(
+            EcommerceAppData(3, "Tiktok", R.drawable.tiktok_logo, "4.5", "600K", 600, 400, listOf(
                 "Eko P." to "Great monthly discounts available.",
                 "Ani R." to "Very secure packaging.",
                 "Zaki F." to "Shipping takes too long."
@@ -109,148 +107,170 @@ fun DashboardScreen(navController: NavController, sharedViewModel: SharedViewMod
         it.name.contains(searchQuery, ignoreCase = true)
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = maroonPrimary),
-                    actions = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.logo_stratify3),
-                                contentDescription = "Logo",
-                                modifier = Modifier.height(38.dp).padding(start = 20.dp)
-                            )
-                            IconButton(onClick = { navController.navigate(Screen.ProfileOptions.route) }, modifier = Modifier.padding(end = 8.dp)) {
-                                if (isPreview) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.ic_profile_placeholder),
-                                        contentDescription = "Profile",
-                                        modifier = Modifier.size(32.dp).clip(CircleShape).border(1.dp, goldAccent, CircleShape),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    GlideImage(
-                                        model = photoUri,
-                                        contentDescription = "Profile",
-                                        modifier = Modifier.size(32.dp).clip(CircleShape).border(1.dp, goldAccent, CircleShape),
-                                        contentScale = ContentScale.Crop
-                                    ) { it.error(R.drawable.ic_profile_placeholder).placeholder(R.drawable.ic_profile_placeholder) }
-                                }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = maroonPrimary),
+                actions = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_stratify3),
+                            contentDescription = "Logo",
+                            modifier = Modifier.height(38.dp).padding(start = 20.dp)
+                        )
+                        IconButton(onClick = { navController.navigate(Screen.ProfileOptions.route) }, modifier = Modifier.padding(end = 8.dp)) {
+                            if (isPreview) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_profile_placeholder),
+                                    contentDescription = "Profile",
+                                    modifier = Modifier.size(32.dp).clip(CircleShape).border(1.dp, goldAccent, CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                GlideImage(
+                                    model = photoUri,
+                                    contentDescription = "Profile",
+                                    modifier = Modifier.size(32.dp).clip(CircleShape).border(1.dp, goldAccent, CircleShape),
+                                    contentScale = ContentScale.Crop
+                                ) { it.error(R.drawable.ic_profile_placeholder).placeholder(R.drawable.ic_profile_placeholder) }
                             }
                         }
                     }
-                )
-            }
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(lightBg)
-                    .verticalScroll(rememberScrollState())
-                    .padding(paddingValues)
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
-            ) {
-                if (isCompareViewActive && compareA != null && compareB != null) {
-                    // --- TAMPILAN PERBANDINGAN ---
-                    CompareViewContent(
-                        appA = compareA!!,
-                        appB = compareB!!,
-                        onBack = {
-                            isCompareViewActive = false
-                            compareA = null
-                            compareB = null
-                        }
-                    )
-                } else {
-                    // --- TAMPILAN UTAMA ---
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(lightBg)
+                .verticalScroll(rememberScrollState())
+                .padding(paddingValues) // Padding dari TopAppBar
+                .padding(top = 16.dp, start = 20.dp, end = 20.dp)
+                .navigationBarsPadding() // respect system navigation bars if present
+                // Add explicit bottom padding to avoid being covered by the app's floating BottomNavigationBar.
+                // BottomNavigationBar uses 80.dp height + 24.dp vertical padding (top+bottom) = 128.dp total.
+                .padding(bottom = 128.dp)
+        ) {
+            if (isCompareViewActive && compareA != null && compareB != null) {
+                // Load remote reviews when entering compare mode
+                LaunchedEffect(compareA?.id, compareB?.id, isCompareViewActive) {
+                    compareViewModel.loadReviews()
+                }
 
-                    // Banner Seleksi Compare
-                    if (compareA != null) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                            colors = CardDefaults.cardColors(containerColor = goldAccent),
-                            shape = RoundedCornerShape(16.dp)
+                // Map app names to review lists fetched by the view model
+                val appAReviews: List<Review> = when (compareA?.name?.lowercase()) {
+                    "shopee" -> compareViewModel.shopeeReviews.value
+                    "tokopedia" -> compareViewModel.tokopediaReviews.value
+                    "tiktok" -> compareViewModel.tiktokReviews.value
+                    else -> emptyList()
+                }
+
+                val appBReviews: List<Review> = when (compareB?.name?.lowercase()) {
+                    "shopee" -> compareViewModel.shopeeReviews.value
+                    "tokopedia" -> compareViewModel.tokopediaReviews.value
+                    "tiktok" -> compareViewModel.tiktokReviews.value
+                    else -> emptyList()
+                }
+                // --- TAMPILAN PERBANDINGAN ---
+                CompareViewContent(
+                    appA = compareA!!,
+                    appB = compareB!!,
+                    appAReviews = appAReviews,
+                    appBReviews = appBReviews,
+                    onBack = {
+                        isCompareViewActive = false
+                        compareA = null
+                        compareB = null
+                        sharedViewModel.isCompareMode.value = false
+                    }
+                )
+            } else {
+                // --- TAMPILAN UTAMA ---
+
+                // Banner Seleksi Compare
+                if (compareA != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                        colors = CardDefaults.cardColors(containerColor = goldAccent),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Icon(
+                                imageVector = Icons.Default.CompareArrows,
+                                contentDescription = null,
+                                tint = maroonPrimary
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Comparing with ${compareA?.name}. Select another!",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                                color = maroonPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { compareA = null }, modifier = Modifier.size(20.dp)) {
                                 Icon(
-                                    imageVector = Icons.Default.CompareArrows,
+                                    imageVector = Icons.Default.Close,
                                     contentDescription = null,
                                     tint = maroonPrimary
                                 )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    "Comparing with ${compareA?.name}. Select another!",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = maroonPrimary,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(onClick = { compareA = null }, modifier = Modifier.size(20.dp)) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = null,
-                                        tint = maroonPrimary
-                                    )
-                                }
                             }
                         }
                     }
+                }
 
-                    // Pinned Section
-                    if (savedAppId != null) {
-                        val pinned = ecommerceApps.find { it.id == savedAppId }
-                        pinned?.let {
-                            PinnedAppCard(
-                                appName = it.name,
-                                posPercent = it.pos * 100 / (it.pos + it.neg),
-                                negPercent = it.neg * 100 / (it.pos + it.neg),
-                                totalReviews = it.pos + it.neg,
-                                onDetailClick = { navController.navigate(Screen.FullAnalysis.route) }
-                            )
-                        }
-                    } else {
-                        EmptyPinnedState()
-                    }
-
-                    Spacer(modifier = Modifier.height(28.dp))
-
-                    Text(
-                        text = "E-Commerce List",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = maroonPrimary
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    filteredApps.forEach { app ->
-                        EcommerceListItem(
-                            appData = app,
-                            isSaved = savedAppId == app.id,
-                            isSelectingForCompare = compareA?.id == app.id,
-                            onSaveToggle = { savedAppId = if (savedAppId == app.id) null else app.id },
-                            onCompareClick = {
-                                val fullApp = ecommerceApps.first { it.id == app.id }
-
-                                if (compareA == null) {
-                                    compareA = fullApp
-                                } else if (compareA?.id != fullApp.id) {
-                                    compareB = fullApp
-                                    isCompareViewActive = true
-                                }
-                            }
-
+                // Pinned Section
+                if (savedAppId != null) {
+                    val pinned = ecommerceApps.find { it.id == savedAppId }
+                    pinned?.let {
+                        PinnedAppCard(
+                            appName = it.name,
+                            posPercent = it.pos * 100 / (it.pos + it.neg),
+                            negPercent = it.neg * 100 / (it.pos + it.neg),
+                            totalReviews = it.pos + it.neg,
+                            onDetailClick = { navController.navigate(Screen.FullAnalysis.route) }
                         )
                     }
+                } else {
+                    EmptyPinnedState()
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Text(
+                    text = "E-Commerce List",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = maroonPrimary
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                filteredApps.forEach { app ->
+                    EcommerceListItem(
+                        appData = app,
+                        isSaved = savedAppId == app.id,
+                        isSelectingForCompare = compareA?.id == app.id,
+                        onSaveToggle = { savedAppId = if (savedAppId == app.id) null else app.id },
+                        onCompareClick = {
+                            if (compareA == null) {
+                                compareA = app
+                            } else if (compareA?.id != app.id) {
+                                compareB = app
+                                isCompareViewActive = true
+                                sharedViewModel.isCompareMode.value = true
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -261,26 +281,11 @@ fun DashboardScreen(navController: NavController, sharedViewModel: SharedViewMod
 fun CompareViewContent(
     appA: EcommerceAppData,
     appB: EcommerceAppData,
-    onBack: () -> Unit,
-    viewModel: DashboardViewModel = viewModel()
+    appAReviews: List<Review> = emptyList(),
+    appBReviews: List<Review> = emptyList(),
+    onBack: () -> Unit
 ) {
-
-    // 🔥 LOAD FIREBASE SEKALI
-    LaunchedEffect(Unit) {
-        viewModel.loadReviews()
-    }
-
-    // 🔥 AMBIL DATA SESUAI APP
-    val reviewsA =
-        if (appA.name == "Shopee") viewModel.shopeeReviews.value
-        else viewModel.tokopediaReviews.value
-
-    val reviewsB =
-        if (appB.name == "Shopee") viewModel.shopeeReviews.value
-        else viewModel.tokopediaReviews.value
-
     Column(modifier = Modifier.fillMaxWidth()) {
-
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(32.dp),
@@ -288,8 +293,6 @@ fun CompareViewContent(
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-
-                // HEADER
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -299,120 +302,51 @@ fun CompareViewContent(
                         Image(painterResource(appA.logo), null, Modifier.size(50.dp))
                         Text(appA.name, fontWeight = FontWeight.Black, color = maroonPrimary)
                     }
-
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(maroonPrimary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("VS", color = goldAccent, fontWeight = FontWeight.Black)
+                    Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(maroonPrimary), contentAlignment = Alignment.Center) {
+                        Text("VS", color = goldAccent, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic)
                     }
-
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                         Image(painterResource(appB.logo), null, Modifier.size(50.dp))
                         Text(appB.name, fontWeight = FontWeight.Black, color = maroonPrimary)
                     }
                 }
-
-                Spacer(Modifier.height(20.dp))
-
-                // RATING
-                Text(
-                    "RATING & REVIEWS",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.Gray,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = lightBg)
+                Spacer(Modifier.height(24.dp))
+                Text("RATING & REVIEWS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(lightBg).padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(appA.rating, fontSize = 26.sp, fontWeight = FontWeight.Black, color = maroonPrimary)
-                            Text(appA.reviews, fontSize = 11.sp, color = Color.Gray)
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .width(1.dp)
-                                .height(48.dp)
-                                .background(Color.LightGray)
-                        )
-
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(appB.rating, fontSize = 26.sp, fontWeight = FontWeight.Black, color = maroonPrimary)
-                            Text(appB.reviews, fontSize = 11.sp, color = Color.Gray)
-                        }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                        Text(appA.rating, fontSize = 18.sp, fontWeight = FontWeight.Black, color = maroonPrimary)
+                        Text(appA.reviews, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    }
+                    Box(Modifier.width(1.dp).height(30.dp).background(Color.LightGray))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                        Text(appB.rating, fontSize = 18.sp, fontWeight = FontWeight.Black, color = maroonPrimary)
+                        Text(appB.reviews, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
                     }
                 }
-
                 Spacer(Modifier.height(24.dp))
-
-                // LATEST REVIEWS
-                Text(
-                    "LATEST REVIEWS",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.Gray,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-
+                Text("LATEST REVIEWS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 Spacer(Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        reviewsA.forEach {
-                            CompareCommentItem(it.userName, it.content)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Render latest remote reviews (fallback to empty)
+                            appAReviews.take(3).forEach { review -> CompareCommentItem(review.userName, review.content) }
                         }
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        reviewsB.forEach {
-                            CompareCommentItem(it.userName, it.content)
-                        }
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            appBReviews.take(3).forEach { review -> CompareCommentItem(review.userName, review.content) }
                     }
                 }
             }
         }
-
         Spacer(Modifier.height(24.dp))
-
-        Button(
-            onClick = onBack,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = maroonPrimary),
-            shape = RoundedCornerShape(24.dp)
-        ) {
+        Button(onClick = onBack, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = maroonPrimary), shape = RoundedCornerShape(24.dp)) {
             Text("BACK TO LIST", fontWeight = FontWeight.Black, color = goldAccent)
         }
     }
 }
-
-
 
 @Composable
 fun CompareCommentItem(user: String, comment: String) {

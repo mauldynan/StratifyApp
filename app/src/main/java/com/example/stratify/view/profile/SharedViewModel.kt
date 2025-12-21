@@ -2,6 +2,7 @@ package com.example.stratify.view.profile
 
 import android.net.Uri
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -16,6 +17,9 @@ class SharedViewModel : ViewModel() {
 
     private var lastDeletedWorkspace: Workspace? = null
     private var lastDeletedWorkspaceIndex: Int = -1
+
+    // UI flags shared across screens
+    var isCompareMode = mutableStateOf(false)
 
     fun createWorkspace(name: String, code: String, password: String) {
         if (!workspaceExists(code)) {

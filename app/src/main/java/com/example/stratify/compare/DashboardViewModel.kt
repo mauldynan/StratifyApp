@@ -12,6 +12,9 @@ class DashboardViewModel : ViewModel() {
 
     var tokopediaReviews = mutableStateOf<List<Review>>(emptyList())
         private set
+    
+    var tiktokReviews = mutableStateOf<List<Review>>(emptyList())
+        private set
 
     fun loadReviews() {
         repo.getLatestReviews("shopee") {
@@ -20,6 +23,11 @@ class DashboardViewModel : ViewModel() {
 
         repo.getLatestReviews("tokopedia") {
             tokopediaReviews.value = it
+        }
+        
+        // Load TikTok reviews as well (new collection added)
+        repo.getLatestReviews("tiktok") {
+            tiktokReviews.value = it
         }
     }
 }

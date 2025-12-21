@@ -1,10 +1,23 @@
 package com.example.stratify.ui.scrum
-
+import com.example.stratify.ui.dashboard.EcommerceAppData
+/**
+ * Data model representing a single task in the Scrum board.
+ */
 data class Task(
-    val id: String = "",
-    val name: String = "",
-    val description: String = "",
-    val estimation: String = "",
-    val deadline: String = "",
-    val status: TaskStatus = TaskStatus.TODO
+    val id: Int,
+    val name: String,
+    val description: String,
+    val estimation: String,
+    val deadline: String,
+    val status: TaskStatus
 )
+
+/**
+ * Enum representing the various stages of a task.
+ */
+enum class TaskStatus(val displayName: String) {
+    TODO("To Do"),
+    IN_PROGRESS("In Progress"),
+    TO_VERIFY("To Verify"),
+    DONE("Done")
+}

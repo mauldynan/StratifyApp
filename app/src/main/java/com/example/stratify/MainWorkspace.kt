@@ -8,7 +8,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.outlined.WorkOutline
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,18 +28,14 @@ import com.example.stratify.ui.workspace.WorkspaceListScreen
 import com.example.stratify.ui.workspace.WorkspaceScreen
 import com.example.stratify.view.profile.SharedViewModel
 
-// --- Colors (Disamakan dengan ScrumScreen) ---
-private val maroonPrimary = Color(0xFF8B0000) // Diubah dari 800000 ke 8B0000 sesuai ScrumScreen
-private val textYellow = Color(0xFFF6C761)    // Diubah dari FFEB3B ke F6C761 sesuai ScrumScreen
+// --- Colors (Matched with ScrumScreen) ---
+private val maroonPrimary = Color(0xFF8B0000)
+private val textYellow = Color(0xFFF6C761)
 private val goldAccent = Color(0xFFEBC05C)
 private val lightGrayBg = Color(0xFFF8F9FB)
 
 @Composable
 fun MainWorkspaceScreen(viewModel: SharedViewModel) {
-    LaunchedEffect(Unit) {
-        viewModel.loadWorkspaces()
-    }
-
     val startDestination = if (viewModel.workspaces.isEmpty()) {
         WorkspaceScreen.Start.route
     } else {
@@ -60,7 +56,6 @@ private fun WorkspaceAppContent(
 ) {
     Scaffold(
         topBar = {
-            // MENGGUNAKAN CenterAlignedTopAppBar agar sama dengan Scrum Board
             CenterAlignedTopAppBar(
                 title = {
                     Text(
@@ -82,7 +77,7 @@ private fun WorkspaceAppContent(
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
-                modifier = Modifier.fillMaxSize().padding(bottom = 120.dp) // FIX: Menambah padding bawah
+                modifier = Modifier.fillMaxSize().padding(bottom = 150.dp) // FIX: Padding bawah diperbesar
             ) {
                 composable(WorkspaceScreen.Start.route) {
                     StartWorkspaceUI(
@@ -106,11 +101,10 @@ private fun WorkspaceAppContent(
                 composable(WorkspaceScreen.JoinWorkspace.route) {
                     JoinWorkspaceScreen(
                         onWorkspaceJoined = { code, password ->
-                            viewModel.joinWorkspace(code, password) { success ->
-                                if (success) {
-                                    navController.navigate(WorkspaceScreen.WorkspaceList.route) {
-                                        popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
-                                    }
+                            val isSuccessful = viewModel.joinWorkspace(code, password)
+                            if (isSuccessful) {
+                                navController.navigate(WorkspaceScreen.WorkspaceList.route) {
+                                    popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
                                 }
                             }
                         },
@@ -159,7 +153,7 @@ fun StartWorkspaceUI(
             imageVector = Icons.Outlined.WorkOutline,
             contentDescription = null,
             tint = goldAccent,
-            modifier = Modifier.size(60.dp)
+            modifier = Modifier.size(80.dp)
         )
         Spacer(modifier = Modifier.weight(1f))
         WorkspaceOptionCard(
@@ -204,7 +198,10 @@ fun WorkspaceOptionCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(50.dp).clip(RoundedCornerShape(12.dp)).background(iconBackgroundColor),
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(iconBackgroundColor),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(imageVector = icon, contentDescription = null, tint = iconContentColor, modifier = Modifier.size(24.dp))
@@ -218,7 +215,7 @@ fun WorkspaceOptionCard(
     }
 }
 
-// --- PREVIEWS ---
+// --- PREVIEWS (FIXED) ---
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showSystemUi = true)
@@ -229,7 +226,9 @@ fun StartWorkspacePreview() {
             topBar = {
                 CenterAlignedTopAppBar(
                     title = { Text("Workspace", fontWeight = FontWeight.Bold, color = textYellow) },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = maroonPrimary)
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = maroonPrimary
+                    )
                 )
             },
             containerColor = lightGrayBg
