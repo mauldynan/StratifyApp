@@ -31,6 +31,10 @@ import com.example.stratify.ui.workspace.WorkspaceDetailScreen
 import com.example.stratify.ui.workspace.WorkspaceListScreen
 import com.example.stratify.ui.workspace.WorkspaceScreen
 import com.example.stratify.view.profile.SharedViewModel
+import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.runtime.LaunchedEffect
+
+
 
 // --- Colors (Matched with ScrumScreen) ---
 private val maroonPrimary = Color(0xFF8B0000)
@@ -40,6 +44,33 @@ private val lightGrayBg = Color(0xFFF8F9FB)
 
 @Composable
 fun MainWorkspaceScreen(viewModel: SharedViewModel) {
+
+    val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+    LaunchedEffect(uid) {
+        if (uid != null) {
+            viewModel.loadUserWorkspaces()
+        }
+    }
+
+    if (viewModel.isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    } else {
+        WorkspaceAppContent(
+            startDestination = if (viewModel.workspaces.isEmpty())
+                WorkspaceScreen.Start.route
+            else
+                WorkspaceScreen.WorkspaceList.route,
+            viewModel = viewModel
+        )
+    }
+
+
     val startDestination = if (viewModel.workspaces.isEmpty()) {
         WorkspaceScreen.Start.route
     } else {
@@ -51,6 +82,7 @@ fun MainWorkspaceScreen(viewModel: SharedViewModel) {
         viewModel = viewModel
     )
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

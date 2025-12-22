@@ -7,6 +7,14 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.stratify.R
 import com.example.stratify.Workspace
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+import com.example.stratify.ui.workspace.WorkspaceRepository
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
+
 
 data class EcommerceAppData(
     val id: Int,
@@ -47,12 +55,36 @@ class SharedViewModel : ViewModel() {
         ))
     )
 
-    fun createWorkspace(name: String, code: String, password: String) {
-        if (!workspaceExists(code)) {
-            val initialMembers = arrayListOf(displayName.value ?: "Creator")
-            _workspaces.add(Workspace(id = code, name = name, password = password, isJoined = false, members = initialMembers))
+    private val repo = WorkspaceRepository()
+
+    var isLoading by mutableStateOf(true)
+        private set
+
+    fun loadUserWorkspaces() {
+        viewModelScope.launch {
+            isLoading = true
+
+            try {
+                val result = repo.getUserWorkspaces()
+                _workspaces.clear()
+                _workspaces.addAll(result)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isLoading = false
+            }
         }
     }
+
+
+
+    fun createWorkspace(name: String, code: String, password: String) {
+        viewModelScope.launch {
+            repo.createWorkspace(name, code, password)
+            loadUserWorkspaces()
+        }
+    }
+
 
     fun getWorkspaceById(workspaceId: String): LiveData<Workspace?> {
         val liveData = MutableLiveData<Workspace?>()
@@ -72,7 +104,7 @@ class SharedViewModel : ViewModel() {
             val index = _workspaces.indexOfFirst { it.id == code }
             if (index != -1) {
                 val existing = _workspaces[index]
-                
+
                 // Only add member if transitioning to joined status
                 if (!existing.isJoined) {
                     val updatedMembers = ArrayList(existing.members)
@@ -86,7 +118,7 @@ class SharedViewModel : ViewModel() {
             }
             return true
         }
-        
+
         // Cannot join a workspace that doesn't exist
         return false
     }

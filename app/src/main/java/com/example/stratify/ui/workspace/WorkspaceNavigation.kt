@@ -23,6 +23,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.stratify.view.profile.SharedViewModel
 
+
+
 // --- Colors ---
 private val maroonPrimary = Color(0xFF800000)
 private val textYellow = Color(0xFFFFEB3B)
@@ -51,10 +53,13 @@ sealed class WorkspaceScreen(
 @Composable
 fun WorkspaceNavHost(
     modifier: Modifier = Modifier,
-    startDestination: String,
-    viewModel: SharedViewModel
+    startDestination: String
 ) {
     val navController = rememberNavController()
+
+    val viewModel: SharedViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+
+
 
     NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
         composable(WorkspaceScreen.Start.route) {
@@ -146,9 +151,8 @@ fun WorkspaceNavHost(
 @Preview(showBackground = true)
 @Composable
 fun WorkspaceNavHostPreview() {
-    val viewModel = SharedViewModel()
     WorkspaceNavHost(
-        startDestination = WorkspaceScreen.Start.route,
-        viewModel = viewModel
+        startDestination = WorkspaceScreen.Start.route
     )
 }
+
