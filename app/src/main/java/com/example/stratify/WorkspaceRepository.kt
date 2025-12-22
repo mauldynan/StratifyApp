@@ -88,7 +88,7 @@ class WorkspaceRepository {
             }
 
             // Check if already a member
-            if (workspace.memberIds.contains(userId)) {
+            if (workspace.memberIds?.contains(userId) == true) {
                 Log.w("REPO_JOIN", "User already a member")
                 return Result.failure(Exception("You are already a member"))
             }
@@ -108,9 +108,9 @@ class WorkspaceRepository {
 
             // Return updated workspace
             val updatedWorkspace = workspace.copy(
-                members = ArrayList(workspace.members).apply { add(userName) },
-                memberIds = ArrayList(workspace.memberIds).apply { add(userId) },
-                memberPhotos = HashMap(workspace.memberPhotos).apply { put(userId, photoUrl) }
+                members = ArrayList(workspace.members ?: emptyList()).apply { add(userName) },
+                memberIds = ArrayList(workspace.memberIds ?: emptyList()).apply { add(userId) },
+                memberPhotos = HashMap(workspace.memberPhotos ?: emptyMap()).apply { put(userId, photoUrl) }
             )
 
             Result.success(updatedWorkspace)

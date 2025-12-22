@@ -52,9 +52,8 @@ fun WorkspaceItem(
     val currentUser = FirebaseAuth.getInstance().currentUser
     val isMyWorkspace = workspace.creatorId == currentUser?.uid
 
-    // Jika workspace saya, pakai data live user. Jika orang lain, pakai data dari workspace.
     val creatorName = if (isMyWorkspace) currentUser?.displayName else workspace.creatorName
-    val photoUrl = if (isMyWorkspace) currentUser?.photoUrl else workspace.memberPhotos[workspace.creatorId]
+    val photoUrl = if (isMyWorkspace) currentUser?.photoUrl else workspace.memberPhotos?.get(workspace.creatorId)
 
     // Status color logic
     val statusColor = when (workspace.status) {

@@ -3,8 +3,10 @@ package com.example.stratify.ui.workspace
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,12 +22,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.stratify.Workspace
+import com.example.stratify.WorkspaceTask
 import com.example.stratify.ui.theme.MaroonPrimary
 import com.example.stratify.view.profile.SharedViewModel
+import java.util.UUID
 
 @Composable
 fun WorkspaceDetailScreen(
@@ -33,7 +37,7 @@ fun WorkspaceDetailScreen(
     workspaceId: String?,
     onBackPressed: () -> Unit
 ) {
-    // FIX: Directly find the workspace in the list to ensure reactive updates.
+    // Find the workspace in the list to get the latest state
     val workspace = viewModel.workspaces.find { it.id == workspaceId }
 
     if (workspace != null) {
@@ -46,8 +50,7 @@ fun WorkspaceDetailScreen(
         )
     } else {
         Box(
-            modifier = Modifier
-                .fillMaxSize(),
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             CircularProgressIndicator(color = MaroonPrimary)
@@ -65,7 +68,7 @@ fun WorkspaceDetailContent(
     var showMembersDialog by remember { mutableStateOf(false) }
     var showAddTaskDialog by remember { mutableStateOf(false) }
 
-    // Dialog: Members List
+    // --- Dialog: Members List ---
     if (showMembersDialog) {
         AlertDialog(
             onDismissRequest = { showMembersDialog = false },
@@ -75,16 +78,13 @@ fun WorkspaceDetailContent(
                     modifier = Modifier.heightIn(max = 300.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // CRASH FIX: Handle null list AND null items inside the list
                     items(workspace.members ?: emptyList()) { member ->
-                        if (member != null) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(member, fontSize = 16.sp)
-                            }
-                            Divider(color = Color.LightGray.copy(alpha = 0.5f))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(member, fontSize = 16.sp)
                         }
+                        HorizontalDivider()
                     }
                 }
             },
@@ -96,15 +96,28 @@ fun WorkspaceDetailContent(
         )
     }
 
-    // Dialog: Add Task
+    // --- Dialog: Add Task ---
     if (showAddTaskDialog) {
-        AddTaskDialog(onDismiss = { showAddTaskDialog = false })
+        AddTaskDialog(
+            onDismiss = { showAddTaskDialog = false },
+            onTaskCreated = { newTask ->
+                // CRITICAL FIX: Create a completely NEW ArrayList.
+                // If we reuse the old list reference, Compose won't detect the change.
+                val currentTasks = workspace.tasks ?: arrayListOf()
+                val newTaskList = ArrayList<WorkspaceTask>()
+                newTaskList.addAll(currentTasks)
+                newTaskList.add(newTask)
+
+                // Update the workspace with the new list
+                onUpdateWorkspace(workspace.copy(tasks = newTaskList))
+                showAddTaskDialog = false
+            }
+        )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                // CRASH FIX: Added Elvis operator (?:) to handle null name
                 title = { Text(workspace.name ?: "Untitled Workspace", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
@@ -127,16 +140,15 @@ fun WorkspaceDetailContent(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // 1. Status Section (Editable)
-            // CRASH FIX: Default to "To Do" if status is null
+            // 1. Status Section
             EditableStatusSection(
-                currentStatus = workspace.status ?: "To Do",
+                currentStatus = workspace.status,
                 onStatusChange = { newStatus ->
                     onUpdateWorkspace(workspace.copy(status = newStatus))
                 }
             )
 
-            // 2. Membership Status (Conditional - Only for Joined Workspaces)
+            // 2. Membership Status (For current user)
             if (workspace.isJoined) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -150,7 +162,6 @@ fun WorkspaceDetailContent(
                             Text("Membership", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
                         HorizontalDivider()
-
                         OutlinedTextField(
                             value = "Joined",
                             onValueChange = {},
@@ -166,21 +177,37 @@ fun WorkspaceDetailContent(
                 }
             }
 
-            // 3. Member Status (Clickable)
-            // CRASH FIX: Safe check for null members list
+            // 3. Member Status (Active Members Count)
             MemberStatusCard(
-                memberCount = workspace.members?.size ?: 0,
+                memberCount = workspace.members.size,
                 onClick = { showMembersDialog = true }
             )
 
-            // 4. Tasks Section (New)
-            TasksSection(onAddTask = { showAddTaskDialog = true })
+            // 4. Tasks Section
+            TasksSection(
+                tasks = workspace.tasks ?: emptyList(),
+                onAddTask = { showAddTaskDialog = true },
+                onTaskChecked = { task, isChecked ->
+                    // CRITICAL FIX: Rebuild list when checking items too
+                    val currentList = workspace.tasks ?: arrayListOf()
+                    val updatedList = ArrayList<WorkspaceTask>()
 
-            // 5. Workspace Details (Editable Department & Description)
-            // CRASH FIX: Default to empty string if null
+                    // Copy all items, modifying the one that was clicked
+                    currentList.forEach { t ->
+                        if (t.id == task.id) {
+                            updatedList.add(t.copy(isCompleted = isChecked))
+                        } else {
+                            updatedList.add(t)
+                        }
+                    }
+                    onUpdateWorkspace(workspace.copy(tasks = updatedList))
+                }
+            )
+
+            // 5. Workspace Details
             EditableDetailsCard(
-                department = workspace.department ?: "",
-                details = workspace.details ?: "",
+                department = workspace.department,
+                details = workspace.details,
                 onDepartmentChange = { newDept ->
                     onUpdateWorkspace(workspace.copy(department = newDept))
                 },
@@ -189,21 +216,31 @@ fun WorkspaceDetailContent(
                 }
             )
 
-            // 6. Security (ID & Password)
-            // CRASH FIX: Default to "Unknown" if null
+            // 6. Security Card
             SecurityCard(
-                workspaceId = workspace.id ?: "Unknown ID",
-                password = workspace.password ?: "No Password"
+                workspaceId = workspace.id,
+                password = workspace.password
             )
         }
     }
 }
 
+// --- SUB-COMPONENTS ---
+
 @Composable
-fun AddTaskDialog(onDismiss: () -> Unit) {
+fun AddTaskDialog(
+    onDismiss: () -> Unit,
+    onTaskCreated: (WorkspaceTask) -> Unit
+) {
     var taskName by remember { mutableStateOf("") }
     var taskDescription by remember { mutableStateOf("") }
-    var fileName by remember { mutableStateOf<String?>(null) }
+    var selectedUri by remember { mutableStateOf<Uri?>(null) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        selectedUri = uri
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -223,26 +260,39 @@ fun AddTaskDialog(onDismiss: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3
                 )
-
-                // File Attachment Button
                 OutlinedButton(
-                    onClick = {
-                        // Mock file attachment
-                        fileName = "screenshot_001.png"
-                    },
+                    onClick = { launcher.launch("image/*") },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.AttachFile, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = fileName ?: "Attach Picture/File")
+                    Text(
+                        text = if (selectedUri != null) "File Selected" else "Attach Picture (Optional)",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (selectedUri != null) {
+                    Text(
+                        text = "Attached: ${selectedUri!!.lastPathSegment}",
+                        fontSize = 12.sp,
+                        color = MaroonPrimary
+                    )
                 }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    // Handle task creation here (needs backend integration)
-                    onDismiss()
+                    if (taskName.isNotBlank()) {
+                        val newTask = WorkspaceTask(
+                            id = UUID.randomUUID().toString(),
+                            title = taskName,
+                            description = taskDescription,
+                            attachmentUri = selectedUri?.toString()
+                        )
+                        onTaskCreated(newTask)
+                    }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = MaroonPrimary)
             ) {
@@ -250,22 +300,28 @@ fun AddTaskDialog(onDismiss: () -> Unit) {
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color.Gray)
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel", color = Color.Gray) }
         }
     )
 }
 
 @Composable
-fun TasksSection(onAddTask: () -> Unit) {
+fun TasksSection(
+    tasks: List<WorkspaceTask>,
+    onAddTask: () -> Unit,
+    onTaskChecked: (WorkspaceTask, Boolean) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.List, contentDescription = "Tasks", tint = MaroonPrimary)
                     Spacer(modifier = Modifier.width(12.dp))
@@ -277,18 +333,63 @@ fun TasksSection(onAddTask: () -> Unit) {
             }
             HorizontalDivider()
 
-            // Placeholder for list of tasks
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
+            if (tasks.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No tasks yet. Click '+' to add one.", color = Color.Gray, fontSize = 14.sp)
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    tasks.forEach { task ->
+                        TaskItem(task = task, onCheckedChange = { isChecked ->
+                            onTaskChecked(task, isChecked)
+                        })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TaskItem(task: WorkspaceTask, onCheckedChange: (Boolean) -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = task.isCompleted,
+                onCheckedChange = onCheckedChange,
+                colors = CheckboxDefaults.colors(checkedColor = MaroonPrimary)
+            )
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "No tasks yet. Click '+' to add one.",
-                    color = Color.Gray,
-                    fontSize = 14.sp
+                    text = task.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = if (task.isCompleted) Color.Gray else Color.Black
                 )
+                if (task.description.isNotBlank()) {
+                    Text(
+                        text = task.description,
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (task.attachmentUri != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                        Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaroonPrimary)
+                        Text("Attachment", fontSize = 10.sp, color = MaroonPrimary)
+                    }
+                }
             }
         }
     }
@@ -303,10 +404,7 @@ fun EditableStatusSection(currentStatus: String, onStatusChange: (String) -> Uni
         Text("Status", fontWeight = FontWeight.Bold, fontSize = 18.sp)
         Box {
             WorkspaceStatusBadge(status = currentStatus, onClick = { expanded = true })
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 statuses.forEach { status ->
                     DropdownMenuItem(
                         text = { Text(status) },
@@ -326,8 +424,8 @@ fun WorkspaceStatusBadge(status: String, onClick: () -> Unit) {
     val (color, displayName) = when (status) {
         "To Do" -> Color.Gray to "To Do"
         "In Progress" -> Color.Blue to "In Progress"
-        "To Verify" -> Color(0xFFFFA500) to "To Verify" // Orange
-        "Done" -> Color(0xFF4CAF50) to "Done" // Green
+        "To Verify" -> Color(0xFFFFA500) to "To Verify"
+        "Done" -> Color(0xFF4CAF50) to "Done"
         else -> Color.Gray to status
     }
 
@@ -348,40 +446,6 @@ fun WorkspaceStatusBadge(status: String, onClick: () -> Unit) {
                 fontSize = 14.sp
             )
             Icon(Icons.Default.ArrowDropDown, contentDescription = "Change Status", tint = color)
-        }
-    }
-}
-
-@Composable
-fun MemberStatusCard(memberCount: Int, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        onClick = onClick // Make card clickable
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Group, contentDescription = "Members", tint = MaroonPrimary)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Active Members", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "$memberCount",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = MaroonPrimary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(Icons.Default.ChevronRight, contentDescription = "View", tint = Color.Gray)
-            }
         }
     }
 }
@@ -433,6 +497,36 @@ fun EditableDetailsCard(
     }
 }
 
+// --- MISSING COMPONENTS ADDED HERE ---
+
+@Composable
+fun MemberStatusCard(memberCount: Int, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Group, contentDescription = "Members", tint = MaroonPrimary)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text("Members", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("$memberCount Active Members", fontSize = 12.sp, color = Color.Gray)
+                }
+            }
+            Icon(Icons.Default.ArrowForwardIos, contentDescription = "View", tint = Color.Gray, modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
 @Composable
 fun SecurityCard(workspaceId: String, password: String) {
     Card(
@@ -444,57 +538,58 @@ fun SecurityCard(workspaceId: String, password: String) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Lock, contentDescription = "Security", tint = MaroonPrimary)
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Access Credentials", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Security", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             HorizontalDivider()
-            CopyableRow(label = "Workspace ID", value = workspaceId)
-            CopyableRow(label = "Password", value = password)
+
+            // Workspace ID
+            OutlinedTextField(
+                value = workspaceId,
+                onValueChange = {},
+                label = { Text("Workspace ID") },
+                readOnly = true,
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = { CopyButton(workspaceId) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaroonPrimary,
+                    focusedLabelColor = MaroonPrimary
+                )
+            )
+
+            // Password
+            OutlinedTextField(
+                value = password,
+                onValueChange = {},
+                label = { Text("Workspace Password") },
+                readOnly = true,
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = { CopyButton(password) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaroonPrimary,
+                    focusedLabelColor = MaroonPrimary
+                )
+            )
         }
     }
 }
 
 @Composable
-fun CopyableRow(label: String, value: String) {
+fun CopyButton(textToCopy: String) {
     val context = LocalContext.current
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = Color.Gray, fontSize = 12.sp)
-            Text(value, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-        }
-        IconButton(onClick = {
-            copyToClipboard(context, label, value)
-        }) {
-            Icon(Icons.Default.ContentCopy, contentDescription = "Copy $label", tint = MaroonPrimary)
-        }
+    IconButton(onClick = {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Copied Text", textToCopy)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+    }) {
+        Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = MaroonPrimary)
     }
 }
 
-fun copyToClipboard(context: Context, label: String, text: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    val clip = ClipData.newPlainText(label, text)
-    clipboard.setPrimaryClip(clip)
-    Toast.makeText(context, "$label copied to clipboard", Toast.LENGTH_SHORT).show()
-}
-
-@Preview(showBackground = true)
 @Composable
-fun WorkspaceDetailScreenPreview() {
-    WorkspaceDetailContent(
-        workspace = Workspace(
-            name = "Project X",
-            status = "In Progress",
-            department = "Engineering",
-            details = "Building the future of project management.",
-            id = "WS-123456",
-            password = "securePassword",
-            members = arrayListOf("User1", "User2", "User3"),
-            isJoined = true
-        ),
-        onBackPressed = {},
-        onUpdateWorkspace = {}
+fun HorizontalDivider() {
+    Divider(
+        color = Color.LightGray.copy(alpha = 0.5f),
+        thickness = 1.dp
     )
 }
