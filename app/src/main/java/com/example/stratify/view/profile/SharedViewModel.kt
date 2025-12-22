@@ -5,10 +5,27 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.example.stratify.R
 import com.example.stratify.Workspace
-import com.example.stratify.WorkspaceRepository
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import com.example.stratify.ui.workspace.WorkspaceRepository
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
+
+
+data class EcommerceAppData(
+    val id: Int,
+    val name: String,
+    val logo: Int,
+    val rating: String,
+    val reviews: String,
+    val pos: Int,
+    val neg: Int,
+    val latestComments: List<Pair<String, String>>
+)
 
 class SharedViewModel : ViewModel() {
     val displayName = MutableLiveData<String>()
@@ -20,27 +37,54 @@ class SharedViewModel : ViewModel() {
     private var lastDeletedWorkspace: Workspace? = null
     private var lastDeletedWorkspaceIndex: Int = -1
 
-    private val repository = WorkspaceRepository()
-    private var listenerRegistration: com.google.firebase.firestore.ListenerRegistration? = null
+    val ecommerceApps = listOf(
+        EcommerceAppData(1, "Shopee", R.drawable.shopee_logo, "4.8", "1.2M", 850, 150, listOf(
+            "Budi S." to "Love the free shipping vouchers!",
+            "Siti A." to "Items arrived fast and as described.",
+            "Andi W." to "App feels a bit laggy sometimes."
+        )),
+        EcommerceAppData(2, "Tokopedia", R.drawable.tokopedia_logo, "4.7", "900K", 780, 220, listOf(
+            "Rina K." to "Everything is original in Official Stores.",
+            "Dedi H." to "Customer service is very responsive.",
+            "Lina M." to "Update frequency is a bit too high."
+        )),
+        EcommerceAppData(3, "Tiktok", R.drawable.tiktok_logo, "4.5", "600K", 600, 400, listOf(
+            "Eko P." to "Great monthly discounts available.",
+            "Ani R." to "Very secure packaging.",
+            "Zaki F." to "Shipping takes too long."
+        ))
+    )
 
-    fun loadWorkspaces() {
-        listenerRegistration?.remove()
-        listenerRegistration = repository.listenToUserWorkspaces(
-            onWorkspacesChanged = { newWorkspaces ->
+    private val repo = WorkspaceRepository()
+
+    var isLoading by mutableStateOf(true)
+        private set
+
+    fun loadUserWorkspaces() {
+        viewModelScope.launch {
+            isLoading = true
+
+            try {
+                val result = repo.getUserWorkspaces()
                 _workspaces.clear()
-                _workspaces.addAll(newWorkspaces)
-            },
-            onError = { e ->
+                _workspaces.addAll(result)
+            } catch (e: Exception) {
                 e.printStackTrace()
+            } finally {
+                isLoading = false
             }
-        )
+        }
     }
+
+
 
     fun createWorkspace(name: String, code: String, password: String) {
         viewModelScope.launch {
-            repository.createWorkspace(code, name, password)
+            repo.createWorkspace(name, code, password)
+            loadUserWorkspaces()
         }
     }
+
 
     fun getWorkspaceById(workspaceId: String): LiveData<Workspace?> {
         val liveData = MutableLiveData<Workspace?>()
@@ -53,19 +97,18 @@ class SharedViewModel : ViewModel() {
         if (index != -1) {
             _workspaces[index] = updatedWorkspace
         }
-        
-        viewModelScope.launch {
-            repository.updateWorkspace(updatedWorkspace)
-        }
     }
 
-    fun joinWorkspace(code: String, password: String, onResult: (Boolean) -> Unit) {
+    fun joinWorkspace(code: String, password: String) {
         viewModelScope.launch {
-            val result = repository.joinWorkspace(code, password)
-            if (result.isSuccess) {
-                onResult(true)
-            } else {
-                onResult(false)
+            isLoading = true
+            try {
+                val success = repo.joinWorkspace(code, password)
+                if (success) {
+                    loadUserWorkspaces()
+                }
+            } finally {
+                isLoading = false
             }
         }
     }
@@ -80,31 +123,16 @@ class SharedViewModel : ViewModel() {
             lastDeletedWorkspace = workspace
             lastDeletedWorkspaceIndex = index
             _workspaces.removeAt(index)
-            
-            viewModelScope.launch {
-                repository.deleteWorkspace(workspace.id)
-            }
         }
     }
 
     fun undoDeleteWorkspace() {
-        lastDeletedWorkspace?.let { workspace ->
+        lastDeletedWorkspace?.let {
             if (lastDeletedWorkspaceIndex != -1) {
-                _workspaces.add(lastDeletedWorkspaceIndex, workspace)
-                
-                viewModelScope.launch {
-                    // Attempt to restore. Note: This creates a fresh workspace with the same basic info
-                    repository.createWorkspace(workspace.id, workspace.name, workspace.password)
-                }
-
+                _workspaces.add(lastDeletedWorkspaceIndex, it)
                 lastDeletedWorkspace = null
                 lastDeletedWorkspaceIndex = -1
             }
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        listenerRegistration?.remove()
     }
 }

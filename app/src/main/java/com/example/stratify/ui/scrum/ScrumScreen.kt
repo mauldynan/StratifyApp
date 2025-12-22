@@ -2,6 +2,7 @@ package com.example.stratify.ui.scrum
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,8 +23,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.auth.FirebaseAuth
+import android.util.Log
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.stratify.ui.theme.StratifyTheme
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -34,6 +38,7 @@ private val maroonPrimary = Color(0xFF8B0000)
 private val textYellow = Color(0xFFF6C761)
 private val lightGray = Color(0xFFF0F0F0)
 private val pureWhite = Color(0xFFFFFFFF)
+private val lightBg = Color(0xFFF8F9FB)
 
 // --- Helper Logic for Auto Estimation ---
 fun calculateEstimation(deadlineString: String): String {
@@ -63,36 +68,86 @@ fun calculateEstimation(deadlineString: String): String {
     } catch (e: Exception) { "" }
 }
 
-// --- Data Classes ---
-enum class TaskStatus(val displayName: String) {
-    TODO("To Do"), IN_PROGRESS("In Progress"), TO_VERIFY("To Verify"), DONE("Done")
-}
-
-data class Task(
-    val id: Int,
-    var name: String,
-    var description: String,
-    var estimation: String,
-    var deadline: String,
-    var status: TaskStatus
-)
+// NOTE: Task and TaskStatus are now imported from Task.kt
 
 class ScrumViewModel : ViewModel() {
     private val _tasks = mutableStateListOf<Task>()
     val tasks: List<Task> = _tasks
     private var lastDeletedTask: Pair<Int, Task>? = null
 
+    private val repo = ScrumRepository()
+    private var listener: ListenerRegistration? = null
+
+    private val auth = FirebaseAuth.getInstance()
+    private val authListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+        val user = firebaseAuth.currentUser
+        if (user != null) {
+            Log.d("SCRUM_VM", "User logged in: ${user.uid}, attaching listener")
+            // start listening to remote changes when user is present
+            if (listener == null) {
+                listener = repo.listenToUserTasks({ list ->
+                    _tasks.clear()
+                    _tasks.addAll(list)
+                }, { e -> Log.w("SCRUM_VM", "listen error", e) })
+            }
+        } else {
+            Log.d("SCRUM_VM", "User logged out, clearing tasks and removing listener")
+            // remove listener and clear local tasks when logged out
+            listener?.remove()
+            listener = null
+            _tasks.clear()
+        }
+    }
+
+    init {
+        // attach auth listener and if user already logged in, start listening
+        auth.addAuthStateListener(authListener)
+        auth.currentUser?.let {
+            listener = repo.listenToUserTasks({ list ->
+                _tasks.clear()
+                _tasks.addAll(list)
+            }, { e -> Log.w("SCRUM_VM", "listen error", e) })
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        listener?.remove()
+        auth.removeAuthStateListener(authListener)
+    }
+
     val activeTaskCount: Int get() = _tasks.count { it.status != TaskStatus.DONE }
     val progressPercentage: Int get() = if (_tasks.isEmpty()) 0 else (_tasks.count { it.status == TaskStatus.DONE } * 100 / _tasks.size)
 
     fun addTask(name: String, description: String, estimation: String, deadline: String) {
-        val newId = (_tasks.maxOfOrNull { it.id } ?: 0) + 1
-        _tasks.add(Task(newId, name, description, estimation, deadline, TaskStatus.TODO))
+        viewModelScope.launch {
+            val tempId = (_tasks.maxOfOrNull { it.id } ?: 0) + 1
+            val localTask = Task(tempId, name, description, estimation, deadline, TaskStatus.TODO)
+            // optimistically add local item (without remoteId) so UI responds immediately
+            _tasks.add(localTask)
+            val res = repo.addTaskRemote(localTask)
+            res.onSuccess { created ->
+                // replace the optimistic item with one that has remoteId and stable id (use hash of remoteId)
+                val idx = _tasks.indexOfFirst { it === localTask || it.id == localTask.id }
+                if (idx != -1) {
+                    val stableId = created.remoteId?.hashCode() ?: created.id
+                    _tasks[idx] = created.copy(id = stableId)
+                }
+            }.onFailure {
+                // failed to persist: leave local item or remove? keep for now
+            }
+        }
     }
 
     fun updateTask(updatedTask: Task) {
+        // update local immediately
         val index = _tasks.indexOfFirst { it.id == updatedTask.id }
         if (index != -1) _tasks[index] = updatedTask
+
+        // persist remote if we have remoteId
+        viewModelScope.launch {
+            updatedTask.remoteId?.let { repo.updateTaskRemote(updatedTask) }
+        }
     }
 
     fun deleteTask(task: Task) {
@@ -100,11 +155,29 @@ class ScrumViewModel : ViewModel() {
         if (index != -1) {
             lastDeletedTask = Pair(index, task)
             _tasks.removeAt(index)
+            // if remote exists, delete from firestore
+            task.remoteId?.let { rid ->
+                viewModelScope.launch { repo.deleteTaskRemote(rid) }
+            }
         }
     }
 
     fun undoDelete() {
-        lastDeletedTask?.let { (index, task) -> _tasks.add(index, task) }
+        lastDeletedTask?.let { (index, task) ->
+            // re-add locally
+            _tasks.add(index.coerceAtMost(_tasks.size), task)
+            // re-add remotely (will create new doc)
+            viewModelScope.launch {
+                val res = repo.addTaskRemote(task.copy(remoteId = null))
+                res.onSuccess { created ->
+                    // update local entry to reference new remote id
+                    val idx = _tasks.indexOfFirst { it.id == task.id }
+                    if (idx != -1) {
+                        _tasks[idx] = created.copy(id = created.remoteId?.hashCode() ?: created.id)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -137,26 +210,26 @@ fun ScrumScreen(viewModel: ScrumViewModel = viewModel()) {
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = maroonPrimary)
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddTaskDialog = true }, containerColor = maroonPrimary) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = textYellow)
-            }
-        },
-        containerColor = pureWhite
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState, modifier = Modifier.navigationBarsPadding().padding(bottom = 98.dp)) },
+        containerColor = lightBg
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .background(lightBg)
+            .padding(paddingValues)
+            .padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.height(16.dp))
             Text("SPRINT #${viewModel.activeTaskCount} • ACTIVE", color = textYellow, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(modifier = Modifier.height(12.dp))
             ProgressCard(progress = viewModel.progressPercentage)
             Spacer(modifier = Modifier.height(24.dp))
-            TaskSectionHeader(taskCount = filteredTasks.size, onFilterSelected = { selectedStatusFilter = it })
+            TaskSectionHeader(taskCount = filteredTasks.size, onFilterSelected = { selectedStatusFilter = it }, onAddClick = { showAddTaskDialog = true })
             Spacer(modifier = Modifier.height(16.dp))
 
             LazyColumn(
+                modifier = Modifier.fillMaxSize().navigationBarsPadding(),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
+                contentPadding = PaddingValues(bottom = 140.dp)
             ) {
                 items(filteredTasks, key = { it.id }) { task ->
                     TaskItem(
@@ -364,29 +437,39 @@ fun ProgressCard(progress: Int) {
 }
 
 @Composable
-fun TaskSectionHeader(taskCount: Int, onFilterSelected: (TaskStatus?) -> Unit) {
+fun TaskSectionHeader(taskCount: Int, onFilterSelected: (TaskStatus?) -> Unit, onAddClick: () -> Unit) {
     var showSortMenu by remember { mutableStateOf(false) }
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("All Tasks", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = maroonPrimary)
             Spacer(modifier = Modifier.width(8.dp))
             Surface(color = textYellow, shape = CircleShape, modifier = Modifier.size(24.dp)) {
-                Box(contentAlignment = Alignment.Center) { Text(taskCount.toString(), color = maroonPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                Box(contentAlignment = Alignment.Center) { Text("$taskCount", color = maroonPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             }
         }
         Box {
-            Button(
-                onClick = { showSortMenu = true },
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFA726).copy(alpha = 0.1f),
-                    contentColor = maroonPrimary
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
-            ) {
-                Icon(Icons.Default.FilterList, null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Filter", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(
+                    onClick = { showSortMenu = true },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFA726).copy(alpha = 0.1f),
+                        contentColor = maroonPrimary
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                ) {
+                    Icon(Icons.Default.FilterList, null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Filter", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = maroonPrimary,
+                    modifier = Modifier.size(40.dp).clickable { onAddClick() }
+                ) {
+                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, contentDescription = "Add Task", tint = textYellow, modifier = Modifier.size(20.dp)) }
+                }
             }
             DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }, modifier = Modifier.background(pureWhite)) {
                 DropdownMenuItem(text = { Text("All") }, onClick = { onFilterSelected(null); showSortMenu = false })
@@ -468,9 +551,11 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onTaskAdded: (String, String, S
 @Preview(showBackground = true)
 @Composable
 fun ScrumPreview() {
-    StratifyTheme {
-        val vm = ScrumViewModel()
-        vm.addTask("Final Polish", "White calendar background and large scale implemented.", "1 Day", "21 Dec 2025")
-        ScrumScreen(vm)
+    val vm = remember { ScrumViewModel() }
+    LaunchedEffect(Unit) {
+        if (vm.tasks.isEmpty()) {
+            vm.addTask("Final Polish", "White calendar background and large scale implemented.", "1 Day", "21 Dec 2025")
+        }
     }
+    ScrumScreen(vm)
 }

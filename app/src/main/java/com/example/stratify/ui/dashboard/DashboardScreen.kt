@@ -41,6 +41,7 @@ import com.bumptech.glide.integration.compose.GlideImage
 import com.example.stratify.DonutChart
 import com.example.stratify.R
 import com.example.stratify.Screen
+import com.example.stratify.view.profile.EcommerceAppData
 import com.example.stratify.view.profile.SharedViewModel
 import com.google.firebase.auth.FirebaseAuth
 
@@ -51,199 +52,167 @@ private val positiveGreen = Color(0xFF10B981)
 private val negativeRed = Color(0xFFEF4444)
 private val lightBg = Color(0xFFF8F9FB)
 
-// Data class untuk database simulasi
-data class EcommerceAppData(
-    val id: Int,
-    val name: String,
-    val logo: Int,
-    val rating: String,
-    val reviews: String,
-    val pos: Int,
-    val neg: Int,
-    val latestComments: List<Pair<String, String>> // Nama User dan Komentar
-)
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalGlideComposeApi::class)
 @Composable
 fun DashboardScreen(navController: NavController, sharedViewModel: SharedViewModel = viewModel()) {
-    // FIX: Removed local drawer state, use Navigation instead
     val isPreview = LocalInspectionMode.current
     val initialPhotoUrl = if (isPreview) null else FirebaseAuth.getInstance().currentUser?.photoUrl
     val photoUri by sharedViewModel.photoUri.observeAsState(initialPhotoUrl)
 
-    // State untuk fitur pencarian
     var searchQuery by remember { mutableStateOf("") }
 
-    // State untuk Pin dan Compare
     var savedAppId by remember { mutableStateOf<Int?>(1) }
     var compareA by remember { mutableStateOf<EcommerceAppData?>(null) }
     var compareB by remember { mutableStateOf<EcommerceAppData?>(null) }
     var isCompareViewActive by remember { mutableStateOf(false) }
 
-    // Mock Database terintegrasi
-    val ecommerceApps = remember {
-        listOf(
-            EcommerceAppData(1, "Shopee", R.drawable.shopee_logo, "4.8", "1.2M", 850, 150, listOf(
-                "Budi S." to "Love the free shipping vouchers!",
-                "Siti A." to "Items arrived fast and as described.",
-                "Andi W." to "App feels a bit laggy sometimes."
-            )),
-            EcommerceAppData(2, "Tokopedia", R.drawable.tokopedia_logo, "4.7", "900K", 780, 220, listOf(
-                "Rina K." to "Everything is original in Official Stores.",
-                "Dedi H." to "Customer service is very responsive.",
-                "Lina M." to "Update frequency is a bit too high."
-            )),
-            EcommerceAppData(3, "Tiktok", R.drawable.tiktok_logo, "4.5", "600K", 600, 400, listOf(
-                "Eko P." to "Great monthly discounts available.",
-                "Ani R." to "Very secure packaging.",
-                "Zaki F." to "Shipping takes too long."
-            ))
-        )
-    }
+    val ecommerceApps = sharedViewModel.ecommerceApps
 
     val filteredApps = ecommerceApps.filter {
         it.name.contains(searchQuery, ignoreCase = true)
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = maroonPrimary),
-                    actions = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.logo_stratify3),
-                                contentDescription = "Logo",
-                                modifier = Modifier.height(38.dp).padding(start = 20.dp)
-                            )
-                            IconButton(onClick = { navController.navigate(Screen.ProfileOptions.route) }, modifier = Modifier.padding(end = 8.dp)) {
-                                if (isPreview) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.ic_profile_placeholder),
-                                        contentDescription = "Profile",
-                                        modifier = Modifier.size(32.dp).clip(CircleShape).border(1.dp, goldAccent, CircleShape),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    GlideImage(
-                                        model = photoUri,
-                                        contentDescription = "Profile",
-                                        modifier = Modifier.size(32.dp).clip(CircleShape).border(1.dp, goldAccent, CircleShape),
-                                        contentScale = ContentScale.Crop
-                                    ) { it.error(R.drawable.ic_profile_placeholder).placeholder(R.drawable.ic_profile_placeholder) }
-                                }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = maroonPrimary),
+                actions = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_stratify3),
+                            contentDescription = "Logo",
+                            modifier = Modifier.height(38.dp).padding(start = 20.dp)
+                        )
+                        IconButton(onClick = { navController.navigate(Screen.ProfileOptions.route) }, modifier = Modifier.padding(end = 8.dp)) {
+                            if (isPreview) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_profile_placeholder),
+                                    contentDescription = "Profile",
+                                    modifier = Modifier.size(32.dp).clip(CircleShape).border(1.dp, goldAccent, CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                GlideImage(
+                                    model = photoUri,
+                                    contentDescription = "Profile",
+                                    modifier = Modifier.size(32.dp).clip(CircleShape).border(1.dp, goldAccent, CircleShape),
+                                    contentScale = ContentScale.Crop
+                                ) { it.error(R.drawable.ic_profile_placeholder).placeholder(R.drawable.ic_profile_placeholder) }
                             }
                         }
                     }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(lightBg)
+                .verticalScroll(rememberScrollState())
+                .padding(paddingValues) // Padding dari TopAppBar
+                .navigationBarsPadding() // FIX: Menghindari navigasi sistem
+                .padding(top = 16.dp, start = 20.dp, end = 20.dp, bottom = 150.dp) // FIX: Padding bawah diperbesar
+        ) {
+            if (isCompareViewActive && compareA != null && compareB != null) {
+                // --- TAMPILAN PERBANDINGAN ---
+                CompareViewContent(
+                    appA = compareA!!,
+                    appB = compareB!!,
+                    onBack = {
+                        isCompareViewActive = false
+                        compareA = null
+                        compareB = null
+                    }
                 )
-            }
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(lightBg)
-                    .verticalScroll(rememberScrollState())
-                    .padding(paddingValues)
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
-            ) {
-                if (isCompareViewActive && compareA != null && compareB != null) {
-                    // --- TAMPILAN PERBANDINGAN ---
-                    CompareViewContent(
-                        appA = compareA!!,
-                        appB = compareB!!,
-                        onBack = {
-                            isCompareViewActive = false
-                            compareA = null
-                            compareB = null
-                        }
-                    )
-                } else {
-                    // --- TAMPILAN UTAMA ---
+            } else {
+                // --- TAMPILAN UTAMA ---
 
-                    // Banner Seleksi Compare
-                    if (compareA != null) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                            colors = CardDefaults.cardColors(containerColor = goldAccent),
-                            shape = RoundedCornerShape(16.dp)
+                // Banner Seleksi Compare
+                if (compareA != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                        colors = CardDefaults.cardColors(containerColor = goldAccent),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Icon(
+                                imageVector = Icons.Default.CompareArrows,
+                                contentDescription = null,
+                                tint = maroonPrimary
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Comparing with ${compareA?.name}. Select another!",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                                color = maroonPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { compareA = null }, modifier = Modifier.size(20.dp)) {
                                 Icon(
-                                    imageVector = Icons.Default.CompareArrows,
+                                    imageVector = Icons.Default.Close,
                                     contentDescription = null,
                                     tint = maroonPrimary
                                 )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    "Comparing with ${compareA?.name}. Select another!",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = maroonPrimary,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(onClick = { compareA = null }, modifier = Modifier.size(20.dp)) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = null,
-                                        tint = maroonPrimary
-                                    )
-                                }
                             }
                         }
                     }
+                }
 
-                    // Pinned Section
-                    if (savedAppId != null) {
-                        val pinned = ecommerceApps.find { it.id == savedAppId }
-                        pinned?.let {
-                            PinnedAppCard(
-                                appName = it.name,
-                                posPercent = it.pos * 100 / (it.pos + it.neg),
-                                negPercent = it.neg * 100 / (it.pos + it.neg),
-                                totalReviews = it.pos + it.neg,
-                                onDetailClick = { navController.navigate(Screen.FullAnalysis.route) }
-                            )
-                        }
-                    } else {
-                        EmptyPinnedState()
-                    }
-
-                    Spacer(modifier = Modifier.height(28.dp))
-
-                    Text(
-                        text = "E-Commerce List",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = maroonPrimary
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    filteredApps.forEach { app ->
-                        EcommerceListItem(
-                            appData = app,
-                            isSaved = savedAppId == app.id,
-                            isSelectingForCompare = compareA?.id == app.id,
-                            onSaveToggle = { savedAppId = if (savedAppId == app.id) null else app.id },
-                            onCompareClick = {
-                                if (compareA == null) {
-                                    compareA = app
-                                } else if (compareA?.id != app.id) {
-                                    compareB = app
-                                    isCompareViewActive = true
-                                }
+                // Pinned Section
+                if (savedAppId != null) {
+                    val pinned = ecommerceApps.find { it.id == savedAppId }
+                    pinned?.let {
+                        PinnedAppCard(
+                            appName = it.name,
+                            posPercent = it.pos * 100 / (it.pos + it.neg),
+                            negPercent = it.neg * 100 / (it.pos + it.neg),
+                            totalReviews = it.pos + it.neg,
+                            onDetailClick = {
+                                // FIX: Menambahkan nama aplikasi sebagai argumen navigasi
+                                navController.navigate("${Screen.FullAnalysis.route}/${it.name}")
                             }
                         )
                     }
+                } else {
+                    EmptyPinnedState()
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Text(
+                    text = "E-Commerce List",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = maroonPrimary
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                filteredApps.forEach { app ->
+                    EcommerceListItem(
+                        appData = app,
+                        isSaved = savedAppId == app.id,
+                        isSelectingForCompare = compareA?.id == app.id,
+                        onSaveToggle = { savedAppId = if (savedAppId == app.id) null else app.id },
+                        onCompareClick = {
+                            if (compareA == null) {
+                                compareA = app
+                            } else if (compareA?.id != app.id) {
+                                compareB = app
+                                isCompareViewActive = true
+                            }
+                        }
+                    )
                 }
             }
         }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +32,12 @@ import com.example.stratify.WorkspaceTask
 import com.example.stratify.ui.theme.MaroonPrimary
 import com.example.stratify.view.profile.SharedViewModel
 import java.util.UUID
+
+// --- Design Tokens ---
+private val maroonPrimary = Color(0xFF760000)
+private val goldAccent = Color(0xFFF6C761)
+private val lightBg = Color(0xFFF8F9FB)
+private val negativeRed = Color(0xFFEF4444)
 
 @Composable
 fun WorkspaceDetailScreen(
@@ -44,8 +52,10 @@ fun WorkspaceDetailScreen(
         WorkspaceDetailContent(
             workspace = workspace,
             onBackPressed = onBackPressed,
-            onUpdateWorkspace = { updatedWorkspace ->
-                viewModel.updateWorkspace(updatedWorkspace)
+            onUpdateWorkspace = { updated -> viewModel.updateWorkspace(updated) },
+            onDeleteWorkspace = {
+                viewModel.deleteWorkspace(workspace!!)
+                onBackPressed()
             }
         )
     } else {
@@ -63,7 +73,8 @@ fun WorkspaceDetailScreen(
 fun WorkspaceDetailContent(
     workspace: Workspace,
     onBackPressed: () -> Unit,
-    onUpdateWorkspace: (Workspace) -> Unit
+    onUpdateWorkspace: (Workspace) -> Unit,
+    onDeleteWorkspace: () -> Unit
 ) {
     var showMembersDialog by remember { mutableStateOf(false) }
     var showAddTaskDialog by remember { mutableStateOf(false) }
@@ -121,31 +132,31 @@ fun WorkspaceDetailContent(
                 title = { Text(workspace.name ?: "Untitled Workspace", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaroonPrimary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                actions = {
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(Icons.Default.Delete, "Delete", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = maroonPrimary)
             )
-        }
+        },
+        containerColor = lightBg
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // 1. Status Section
             EditableStatusSection(
                 currentStatus = workspace.status,
-                onStatusChange = { newStatus ->
-                    onUpdateWorkspace(workspace.copy(status = newStatus))
-                }
+                onStatusChange = { newStatus -> onUpdateWorkspace(workspace.copy(status = newStatus)) }
             )
 
             // 2. Membership Status (For current user)
@@ -208,11 +219,8 @@ fun WorkspaceDetailContent(
             EditableDetailsCard(
                 department = workspace.department,
                 details = workspace.details,
-                onDepartmentChange = { newDept ->
-                    onUpdateWorkspace(workspace.copy(department = newDept))
-                },
-                onDetailsChange = { newDetails ->
-                    onUpdateWorkspace(workspace.copy(details = newDetails))
+                onUpdate = { dept, detail ->
+                    onUpdateWorkspace(workspace.copy(department = dept, details = detail))
                 }
             )
 
@@ -396,18 +404,18 @@ fun TaskItem(task: WorkspaceTask, onCheckedChange: (Boolean) -> Unit) {
 }
 
 @Composable
-fun EditableStatusSection(currentStatus: String, onStatusChange: (String) -> Unit) {
+fun StatusSelectionSection(currentStatus: String, onStatusChange: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val statuses = listOf("To Do", "In Progress", "To Verify", "Done")
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Status", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text("STATUS WORKSPACE", fontSize = 11.sp, fontWeight = FontWeight.Black, color = maroonPrimary, letterSpacing = 1.sp)
         Box {
             WorkspaceStatusBadge(status = currentStatus, onClick = { expanded = true })
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 statuses.forEach { status ->
                     DropdownMenuItem(
-                        text = { Text(status) },
+                        text = { Text(status, fontWeight = FontWeight.Bold) },
                         onClick = {
                             onStatusChange(status)
                             expanded = false
@@ -429,23 +437,21 @@ fun WorkspaceStatusBadge(status: String, onClick: () -> Unit) {
         else -> Color.Gray to status
     }
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
-        shape = RoundedCornerShape(50),
-        onClick = onClick
+    Surface(
+        onClick = onClick,
+        color = color.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.3f))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = displayName,
-                modifier = Modifier.padding(end = 4.dp),
-                color = color,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-            Icon(Icons.Default.ArrowDropDown, contentDescription = "Change Status", tint = color)
+            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(status.uppercase(), fontSize = 12.sp, fontWeight = FontWeight.Black, color = color)
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(Icons.Default.ArrowDropDown, null, tint = color, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -454,44 +460,48 @@ fun WorkspaceStatusBadge(status: String, onClick: () -> Unit) {
 fun EditableDetailsCard(
     department: String,
     details: String,
-    onDepartmentChange: (String) -> Unit,
-    onDetailsChange: (String) -> Unit
+    onUpdate: (String, String) -> Unit
 ) {
+    var deptState by remember { mutableStateOf(department) }
+    var descState by remember { mutableStateOf(details) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Info, contentDescription = "Info", tint = MaroonPrimary)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Workspace Details", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Icon(Icons.Default.Info, null, tint = maroonPrimary, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("DETAIL TUGAS", fontSize = 11.sp, fontWeight = FontWeight.Black, color = maroonPrimary)
             }
             HorizontalDivider()
 
             OutlinedTextField(
-                value = department,
-                onValueChange = onDepartmentChange,
-                label = { Text("Department") },
+                value = deptState,
+                onValueChange = {
+                    deptState = it
+                    onUpdate(it, descState)
+                },
+                label = { Text("Departemen Bertugas") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaroonPrimary,
-                    focusedLabelColor = MaroonPrimary
-                )
+                shape = RoundedCornerShape(16.dp),
+                leadingIcon = { Icon(Icons.Default.Business, null, tint = maroonPrimary) }
             )
 
             OutlinedTextField(
-                value = details,
-                onValueChange = onDetailsChange,
-                label = { Text("Description") },
+                value = descState,
+                onValueChange = {
+                    descState = it
+                    onUpdate(deptState, it)
+                },
+                label = { Text("Deskripsi Task") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaroonPrimary,
-                    focusedLabelColor = MaroonPrimary
-                )
+                shape = RoundedCornerShape(16.dp),
+                leadingIcon = { Icon(Icons.Default.Notes, null, tint = maroonPrimary) }
             )
         }
     }
@@ -528,11 +538,12 @@ fun MemberStatusCard(memberCount: Int, onClick: () -> Unit) {
 }
 
 @Composable
-fun SecurityCard(workspaceId: String, password: String) {
+fun MembersListCard(members: List<String>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
