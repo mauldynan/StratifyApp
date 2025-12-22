@@ -69,18 +69,6 @@ fun MainWorkspaceScreen(viewModel: SharedViewModel) {
             viewModel = viewModel
         )
     }
-
-
-    val startDestination = if (viewModel.workspaces.isEmpty()) {
-        WorkspaceScreen.Start.route
-    } else {
-        WorkspaceScreen.WorkspaceList.route
-    }
-
-    WorkspaceAppContent(
-        startDestination = startDestination,
-        viewModel = viewModel
-    )
 }
 
 
@@ -96,8 +84,8 @@ private fun WorkspaceAppContent(
 
     Scaffold(
         topBar = {
-            if (currentRoute != WorkspaceScreen.CreateWorkspace.route &&
-                currentRoute != WorkspaceScreen.JoinWorkspace.route
+            if (currentRoute == WorkspaceScreen.Start.route ||
+                currentRoute == WorkspaceScreen.WorkspaceList.route
             ) {
                 CenterAlignedTopAppBar(
                     title = {

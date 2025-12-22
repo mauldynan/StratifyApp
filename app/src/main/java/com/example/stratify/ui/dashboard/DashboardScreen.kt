@@ -177,10 +177,7 @@ fun DashboardScreen(navController: NavController, sharedViewModel: SharedViewMod
                             posPercent = it.pos * 100 / (it.pos + it.neg),
                             negPercent = it.neg * 100 / (it.pos + it.neg),
                             totalReviews = it.pos + it.neg,
-                            onDetailClick = {
-                                // FIX: Menambahkan nama aplikasi sebagai argumen navigasi
-                                navController.navigate("${Screen.FullAnalysis.route}/${it.name}")
-                            }
+                            onDetailClick = { navController.navigate("${Screen.FullAnalysis.route}/${it.name}") }
                         )
                     }
                 } else {

@@ -37,14 +37,24 @@ fun WorkspaceListScreen(
     onNavigateToCreateWorkspace: () -> Unit,
     onNavigateToJoinWorkspace: () -> Unit
 ) {
-    val uid = FirebaseAuth.getInstance().currentUser?.uid
+    // --- PENYEBAB KEDAP-KEDIP ---
+    // LaunchedEffect(uid) akan tereksekusi setiap kali komposisi ulang jika uid berubah (atau dianggap berubah).
+    // Lebih parah lagi, viewModel.loadUserWorkspaces() mungkin memicu pembaruan 'workspaces' di ViewModel,
+    // yang menyebabkan recomposition WorkspaceListScreen, yang memanggil loadUserWorkspaces lagi (jika tidak dijaga).
+    // Namun di sini kuncinya adalah 'uid'.
 
+    // Solusi: Pindahkan pemanggilan loadUserWorkspaces ke MainWorkspaceScreen atau pastikan hanya dipanggil sekali.
+    // Di MainWorkspaceScreen sudah ada pemanggilan loadUserWorkspaces.
+    // JADI KITA HAPUS SAJA DI SINI UNTUK MENCEGAH DOUBLE RELOAD / LOOP.
+
+    /*
+    val uid = FirebaseAuth.getInstance().currentUser?.uid
     LaunchedEffect(uid) {
         if (uid != null) {
             viewModel.loadUserWorkspaces()
         }
     }
-
+    */
 
     WorkspaceListContent(
         workspaces = viewModel.workspaces,
