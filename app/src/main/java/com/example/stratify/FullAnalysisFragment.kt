@@ -1,348 +1,386 @@
 package com.example.stratify
 
 import android.graphics.Color as AndroidColor
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.fragment.app.Fragment
-import androidx.navigation.findNavController
-import com.example.stratify.ui.theme.MaroonPrimary
-import com.example.stratify.ui.theme.StratifyTheme
+import androidx.core.graphics.toColorInt
+import com.example.stratify.ml.SentimentAnalyzer
+import com.example.stratify.network.RetrofitClient
 import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.Locale
 
-class FullAnalysisFragment : Fragment() {
+// PENTING: Karena SentimentAnalyzer & RetrofitClient ada di folder yang sama,
+// kita TIDAK PERLU import manual.
+// Jika masih merah, tekan Alt+Enter pada kata SentimentAnalyzer di bawah.
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        // Kita menggunakan ComposeView sebagai root view, menggantikan XML inflater
-        return ComposeView(requireContext()).apply {
-            setContent {
-                StratifyTheme {
-                    // Panggil fungsi Composable utama di sini
-                    FullAnalysisScreen(
-                        onBackClick = { findNavController().popBackStack() }
+// --- Warna Desain ---
+private val maroonPrimary = Color(0xFF760000)
+private val goldAccent = Color(0xFFF6C761)
+private val lightBg = Color(0xFFF8F9FB)
+
+// Model Data untuk UI
+data class AnalyzedReview(
+    val username: String,
+    val content: String,
+    val date: String,
+    val sentiment: String // "Positif" atau "Negatif"
+)
+
+// =====================================================================
+// 1. BAGIAN LOGIC (Stateful)
+// =====================================================================
+@Composable
+fun FullAnalysisFragment(
+    targetApp: String,
+    onBackPressed: () -> Unit
+) {
+    val context = LocalContext.current
+
+    // State
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var analyzedReviews by remember { mutableStateOf<List<AnalyzedReview>>(emptyList()) }
+    var positiveCount by remember { mutableIntStateOf(0) }
+    var negativeCount by remember { mutableIntStateOf(0) }
+
+    // Logic: Download & Analisis ML
+    LaunchedEffect(targetApp) {
+        withContext(Dispatchers.IO) {
+            try {
+                // Inisialisasi SentimentAnalyzer
+                // (Pastikan file SentimentAnalyzer.kt kamu punya class SentimentAnalyzer)
+                val analyzer = SentimentAnalyzer(context)
+
+                // Ambil data dari Python via RetrofitClient
+                // (Pastikan file RetrofitClient.kt kamu punya object RetrofitClient)
+                val rawReviews = RetrofitClient.instance.getReviews(targetApp)
+
+                val results = rawReviews.map { review ->
+                    // FUNGSI PREDICT DIPANGGIL DI SINI
+                    val sentimentResult = analyzer.predict(review.content)
+
+                    AnalyzedReview(
+                        username = review.username,
+                        content = review.content,
+                        date = review.date,
+                        sentiment = sentimentResult
                     )
+                }
+
+                val pos = results.count { it.sentiment == "Positif" }
+                val neg = results.count { it.sentiment == "Negatif" }
+
+                withContext(Dispatchers.Main) {
+                    analyzedReviews = results
+                    positiveCount = pos
+                    negativeCount = neg
+                    isLoading = false
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    isLoading = false
+                    errorMessage = "Gagal terhubung ke Server.\nCek server Python atau Internet."
                 }
             }
         }
     }
+
+    // Panggil UI
+    FullAnalysisContent(
+        targetApp = targetApp,
+        isLoading = isLoading,
+        errorMessage = errorMessage,
+        analyzedReviews = analyzedReviews,
+        positiveCount = positiveCount,
+        negativeCount = negativeCount,
+        onBackPressed = onBackPressed
+    )
 }
 
+// =====================================================================
+// 2. BAGIAN TAMPILAN (Stateless)
+// =====================================================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FullAnalysisScreen(onBackClick: () -> Unit) {
+fun FullAnalysisContent(
+    targetApp: String,
+    isLoading: Boolean,
+    errorMessage: String?,
+    analyzedReviews: List<AnalyzedReview>,
+    positiveCount: Int,
+    negativeCount: Int,
+    onBackPressed: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Full Analysis", fontWeight = FontWeight.Bold, color = colorResource(id = R.color.app_yellow) ) },
+                title = {
+                    Text(
+                        "ANALYSIS: ${targetApp.uppercase()}",
+                        fontWeight = FontWeight.Black,
+                        color = goldAccent,
+                        fontSize = 16.sp
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = onBackPressed) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = goldAccent)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaroonPrimary,
-                    navigationIconContentColor = colorResource(id = R.color.app_yellow)
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = maroonPrimary)
             )
         }
     ) { paddingValues ->
-        // Column Utama (Pengganti ScrollView di XML)
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White)
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
-
-            // --- BAGIAN 1: SHOPEE CARD & DONUT CHART ---
-            Card(
-                modifier = Modifier.fillMaxWidth().height(150.dp),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically
+        Box(modifier = Modifier.fillMaxSize().background(lightBg).padding(paddingValues)) {
+            if (isLoading) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.shopee_logo),
-                        contentDescription = "Shopee Logo",
-                        modifier = Modifier.size(80.dp).padding(start = 12.dp),
-                        contentScale = ContentScale.Fit
+                    CircularProgressIndicator(color = maroonPrimary)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Sedang mengambil data & analisis AI...", color = Color.Gray, fontSize = 12.sp)
+                }
+            } else if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    color = Color.Red,
+                    fontSize = 14.sp,
+                    modifier = Modifier.align(Alignment.Center),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                ) {
+                    SummarySection(
+                        appName = targetApp.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
+                        posCount = positiveCount,
+                        negCount = negativeCount
                     )
 
-                    Column(
-                        modifier = Modifier.padding(start = 8.dp, end = 12.dp)
-                    ) {
-                        Text(
-                            text = "Shopee",
-                            color = Color.Black,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "4.6 / 5 Bintang",
-                            color = Color.DarkGray,
-                            fontSize = 12.sp
-                        )
-                    }
+                    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("SENTIMENT TREND", fontSize = 11.sp, fontWeight = FontWeight.Black, color = maroonPrimary.copy(0.6f))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    Spacer(Modifier.weight(1f))
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(24.dp),
+                            elevation = CardDefaults.cardElevation(2.dp),
+                            modifier = Modifier.fillMaxWidth().height(200.dp)
+                        ) {
+                            AndroidView(
+                                factory = { ctx ->
+                                    LineChart(ctx).apply {
+                                        description.isEnabled = false
+                                        setDrawGridBackground(false)
+                                        xAxis.position = XAxis.XAxisPosition.BOTTOM
+                                        axisRight.isEnabled = false
+                                        setPinchZoom(true)
+                                        legend.isEnabled = true
+                                    }
+                                },
+                                update = { chart ->
+                                    updateLineChartData(chart, positiveCount, negativeCount)
+                                },
+                                modifier = Modifier.fillMaxSize().padding(16.dp)
+                            )
+                        }
 
-                    Column(
-                        modifier = Modifier.padding(end = 12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        DonutChart(
-                            modifier = Modifier.size(width = 140.dp, height = 70.dp),
-                            positivePercent = 70f,
-                            negativePercent = 30f,
-                            totalReviews = 1200
-                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("LATEST REVIEWS", fontSize = 11.sp, fontWeight = FontWeight.Black, color = maroonPrimary.copy(0.6f))
+                            Spacer(Modifier.weight(1f))
+                            Icon(Icons.Default.FilterList, null, modifier = Modifier.size(16.dp), tint = maroonPrimary)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        analyzedReviews.forEach { review ->
+                            ReviewItem(
+                                name = review.username,
+                                date = review.date,
+                                comment = review.content,
+                                sentiment = review.sentiment
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        Spacer(modifier = Modifier.height(50.dp))
                     }
                 }
             }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(20.dp))
+// --- Helper UI Components ---
 
-            // --- BAGIAN 2: SENTIMENT CHART (MPAndroidChart) ---
-            Text("Sentiment Analysis Chart", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+@Composable
+fun SummarySection(appName: String, posCount: Int, negCount: Int) {
+    val total = posCount + negCount
 
-            Spacer(modifier = Modifier.height(8.dp))
+    // Logic for dynamic logo
+    val logoRes = when (appName.lowercase(Locale.ROOT)) {
+        "shopee" -> R.drawable.shopee_logo
+        "tokopedia" -> R.drawable.tokopedia_logo
+        "tiktok" -> R.drawable.tiktok_logo
+        "lazada" -> R.drawable.lazada_logo
+        "bukalapak" -> R.drawable.bukalapak_logo
+        "zalora" -> R.drawable.zalora_logo
+        "amazon" -> R.drawable.amazon_logo
+        else -> R.drawable.logo_stratify3 // Default logo if not found
+    }
 
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(maroonPrimary, lightBg)), alpha = 0.05f)
+            .padding(24.dp)
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(32.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(24.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Menggunakan AndroidView agar bisa pakai library lama (MPAndroidChart) di Compose
-                AndroidView(
-                    factory = { context ->
-                        LineChart(context).apply {
-                            description.isEnabled = false
-                            setDrawGridBackground(false)
-                            axisRight.isEnabled = false
-                            xAxis.position = XAxis.XAxisPosition.BOTTOM
-                            xAxis.setDrawGridLines(false)
-                            axisLeft.textColor = AndroidColor.DKGRAY
-                            xAxis.textColor = AndroidColor.DKGRAY
-                            legend.isEnabled = true
-                        }
-                    },
-                    update = { lineChart ->
-                        updateLineChartData(lineChart)
-                    },
-                    modifier = Modifier.fillMaxSize().padding(8.dp)
+                Image(
+                    painter = painterResource(id = logoRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(50.dp),
+                    contentScale = ContentScale.Fit
                 )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- BAGIAN 3: DOMINANT KEYWORDS ---
-            Text(
-                text = "Dominant Keywords",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF800000), // Warna Maroon
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(modifier = Modifier.fillMaxWidth()) {
-                // Kartu Keyword Positif
-                KeywordCard(
-                    title = "Positif",
-                    color = Color(0xFF4CAF50), // Hijau
-                    bgColor = Color(0xFFE8F9EE),
-                    items = listOf("Good promo", "Free shipping", "Nice app"),
-                    modifier = Modifier.weight(1f).padding(end = 6.dp)
-                )
-
-                // Kartu Keyword Negatif
-                KeywordCard(
-                    title = "Negatif",
-                    color = Color(0xFFF44336), // Merah
-                    bgColor = Color(0xFFFFF1F1),
-                    items = listOf("Bug", "Lambat", "Sulit digunakan"),
-                    modifier = Modifier.weight(1f).padding(start = 6.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- BAGIAN 4: FILTER BUTTONS ---
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterButton("Latest", Modifier.weight(1f))
-                FilterButton("Positive", Modifier.weight(1f))
-                FilterButton("Negative", Modifier.weight(1f))
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // --- BAGIAN 5: LIST REVIEWS ---
-            Text("Reviews", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            ReviewItem(
-                name = "Budi S. - 12 Jan 2024",
-                comment = "The app makes work very easy",
-                rating = "⭐⭐⭐⭐⭐ 5/5"
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            ReviewItem(
-                name = "Siti N. - 10 Jan 2024",
-                comment = "The app is interesting, lots of great features!",
-                rating = "⭐ 1/5"
-            )
-
-            // Tambahan padding bawah agar tidak kepotong
-            Spacer(modifier = Modifier.height(20.dp))
-        }
-    }
-}
-
-// ==========================================
-// SUB-COMPOSABLES (Komponen Kecil)
-// ==========================================
-
-@Composable
-fun KeywordCard(title: String, color: Color, bgColor: Color, items: List<String>, modifier: Modifier = Modifier) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = bgColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = modifier
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(title, fontWeight = FontWeight.Bold, color = color, fontSize = 15.sp)
-            Spacer(modifier = Modifier.height(6.dp))
-            Box(modifier = Modifier
-                .width(30.dp)
-                .height(2.dp)
-                .background(color))
-            Spacer(modifier = Modifier.height(8.dp))
-            items.forEach { item ->
-                Text("• $item", fontSize = 13.sp, lineHeight = 20.sp, color = Color.Black)
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(appName, fontWeight = FontWeight.Black, fontSize = 20.sp, color = maroonPrimary)
+                    Text("$total Reviews Analyzed", fontSize = 12.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row {
+                        Text("$posCount Positif", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
+                        Text(" • ", fontSize = 11.sp)
+                        Text("$negCount Negatif", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFEF4444))
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun FilterButton(text: String, modifier: Modifier = Modifier) {
-    Button(
-        onClick = {},
-        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-        shape = RoundedCornerShape(8.dp),
-        contentPadding = PaddingValues(0.dp),
-        modifier = modifier.height(35.dp)
-    ) {
-        Text(text, fontSize = 10.sp, color = Color.White)
-    }
-}
-
-@Composable
-fun ReviewItem(name: String, comment: String, rating: String) {
+fun ReviewItem(name: String, date: String, comment: String, sentiment: String) {
+    val badgeColor = if (sentiment == "Positif") Color(0xFF10B981) else Color(0xFFEF4444)
     Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(10.dp),
-        modifier = Modifier.fillMaxWidth()
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Row(modifier = Modifier.padding(10.dp)) {
-            // Pastikan kamu punya gambar 'ic_acc' di res/drawable
-            Image(
-                painter = painterResource(id = R.drawable.ic_acc),
-                contentDescription = "User Icon",
-                modifier = Modifier.size(40.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
+        Row(modifier = Modifier.padding(16.dp)) {
+            Box(
+                modifier = Modifier.size(40.dp).clip(CircleShape).background(maroonPrimary.copy(0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(name.take(1).uppercase(), fontWeight = FontWeight.Black, color = maroonPrimary)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Text(comment, fontSize = 13.sp, modifier = Modifier.padding(vertical = 4.dp))
-                Text(rating, fontSize = 12.sp, color = Color(0xFF800000))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(name, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = maroonPrimary)
+                    Surface(color = badgeColor.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp)) {
+                        Text(sentiment.uppercase(), color = badgeColor, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    }
+                }
+                Text(date, fontSize = 10.sp, color = Color.LightGray)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(comment, fontSize = 12.sp, color = Color.DarkGray, lineHeight = 18.sp)
             }
         }
     }
 }
 
-// ==========================================
-// LOGIC HELPER UNTUK CHART (MPAndroidChart)
-// ==========================================
+fun updateLineChartData(chart: LineChart, pos: Int, neg: Int) {
+    val entriesPos = listOf(Entry(1f, pos * 0.2f), Entry(2f, pos * 0.5f), Entry(3f, pos.toFloat()))
+    val entriesNeg = listOf(Entry(1f, neg * 0.2f), Entry(2f, neg * 0.6f), Entry(3f, neg.toFloat()))
 
-fun updateLineChartData(lineChart: LineChart) {
-    val positiveEntries = listOf(Entry(1f, 1f), Entry(2f, 2f), Entry(3f, 1.5f), Entry(4f, 2.5f), Entry(5f, 3f))
-    val negativeEntries = listOf(Entry(1f, 0.5f), Entry(2f, 1f), Entry(3f, 0.8f), Entry(4f, 1.5f), Entry(5f, 2f))
-
-    val positiveSet = LineDataSet(positiveEntries, "Positive").apply {
-        color = AndroidColor.parseColor("#4CAF50")
+    val set1 = LineDataSet(entriesPos, "Positif").apply {
+        color = "#10B981".toColorInt()
         lineWidth = 2f
-        setCircleColor(AndroidColor.parseColor("#4CAF50"))
-        mode = LineDataSet.Mode.CUBIC_BEZIER
-        setDrawValues(false)
+        setDrawCircles(false)
     }
-
-    val negativeSet = LineDataSet(negativeEntries, "Negative").apply {
-        color = AndroidColor.parseColor("#F44336")
+    val set2 = LineDataSet(entriesNeg, "Negatif").apply {
+        color = "#EF4444".toColorInt()
         lineWidth = 2f
-        setCircleColor(AndroidColor.parseColor("#F44336"))
-        mode = LineDataSet.Mode.CUBIC_BEZIER
-        setDrawValues(false)
+        setDrawCircles(false)
     }
-
-    lineChart.data = LineData(positiveSet, negativeSet)
-    lineChart.invalidate()
+    chart.data = LineData(set1, set2)
+    chart.invalidate()
 }
 
-@Preview(showBackground = true)
+// =====================================================================
+// 3. PREVIEW SECTION
+// =====================================================================
+@Preview(showBackground = true, name = "Full Analysis - Loading")
 @Composable
-fun FullAnalysisScreenPreview() {
-    StratifyTheme {
-        FullAnalysisScreen(onBackClick = {})
-    }
+fun PreviewLoading() {
+    FullAnalysisContent(
+        targetApp = "Shopee",
+        isLoading = true,
+        errorMessage = null,
+        analyzedReviews = emptyList(),
+        positiveCount = 0,
+        negativeCount = 0,
+        onBackPressed = {}
+    )
+}
+
+@Preview(showBackground = true, name = "Full Analysis - Success", heightDp = 800)
+@Composable
+fun PreviewSuccess() {
+    val dummyReviews = listOf(
+        AnalyzedReview("Budi", "Aplikasi sangat bagus!", "2023-10-01", "Positif"),
+        AnalyzedReview("Siti", "Pengiriman agak lama ya", "2023-10-02", "Negatif")
+    )
+
+    FullAnalysisContent(
+        targetApp = "Shopee",
+        isLoading = false,
+        errorMessage = null,
+        analyzedReviews = dummyReviews,
+        positiveCount = 1,
+        negativeCount = 1,
+        onBackPressed = {}
+    )
 }
