@@ -4,21 +4,17 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,11 +33,12 @@ fun WorkspaceDetailScreen(
     workspaceId: String?,
     onBackPressed: () -> Unit
 ) {
-    val workspace by viewModel.getWorkspaceById(workspaceId ?: "").observeAsState()
+    // FIX: Directly find the workspace in the list to ensure reactive updates.
+    val workspace = viewModel.workspaces.find { it.id == workspaceId }
 
     if (workspace != null) {
         WorkspaceDetailContent(
-            workspace = workspace!!,
+            workspace = workspace,
             onBackPressed = onBackPressed,
             onUpdateWorkspace = { updatedWorkspace ->
                 viewModel.updateWorkspace(updatedWorkspace)
@@ -65,10 +62,50 @@ fun WorkspaceDetailContent(
     onBackPressed: () -> Unit,
     onUpdateWorkspace: (Workspace) -> Unit
 ) {
+    var showMembersDialog by remember { mutableStateOf(false) }
+    var showAddTaskDialog by remember { mutableStateOf(false) }
+
+    // Dialog: Members List
+    if (showMembersDialog) {
+        AlertDialog(
+            onDismissRequest = { showMembersDialog = false },
+            title = { Text("Active Members") },
+            text = {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 300.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // CRASH FIX: Handle null list AND null items inside the list
+                    items(workspace.members ?: emptyList()) { member ->
+                        if (member != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(member, fontSize = 16.sp)
+                            }
+                            Divider(color = Color.LightGray.copy(alpha = 0.5f))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showMembersDialog = false }) {
+                    Text("Close", color = MaroonPrimary)
+                }
+            }
+        )
+    }
+
+    // Dialog: Add Task
+    if (showAddTaskDialog) {
+        AddTaskDialog(onDismiss = { showAddTaskDialog = false })
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(workspace.name, fontWeight = FontWeight.Bold) },
+                // CRASH FIX: Added Elvis operator (?:) to handle null name
+                title = { Text(workspace.name ?: "Untitled Workspace", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -91,8 +128,9 @@ fun WorkspaceDetailContent(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // 1. Status Section (Editable)
+            // CRASH FIX: Default to "To Do" if status is null
             EditableStatusSection(
-                currentStatus = workspace.status,
+                currentStatus = workspace.status ?: "To Do",
                 onStatusChange = { newStatus ->
                     onUpdateWorkspace(workspace.copy(status = newStatus))
                 }
@@ -128,13 +166,21 @@ fun WorkspaceDetailContent(
                 }
             }
 
-            // 3. Member Status
-            MemberStatusCard(memberCount = workspace.members.size)
+            // 3. Member Status (Clickable)
+            // CRASH FIX: Safe check for null members list
+            MemberStatusCard(
+                memberCount = workspace.members?.size ?: 0,
+                onClick = { showMembersDialog = true }
+            )
 
-            // 4. Workspace Details (Editable Department & Description)
+            // 4. Tasks Section (New)
+            TasksSection(onAddTask = { showAddTaskDialog = true })
+
+            // 5. Workspace Details (Editable Department & Description)
+            // CRASH FIX: Default to empty string if null
             EditableDetailsCard(
-                department = workspace.department,
-                details = workspace.details,
+                department = workspace.department ?: "",
+                details = workspace.details ?: "",
                 onDepartmentChange = { newDept ->
                     onUpdateWorkspace(workspace.copy(department = newDept))
                 },
@@ -143,8 +189,107 @@ fun WorkspaceDetailContent(
                 }
             )
 
-            // 5. Security (ID & Password)
-            SecurityCard(workspaceId = workspace.id, password = workspace.password)
+            // 6. Security (ID & Password)
+            // CRASH FIX: Default to "Unknown" if null
+            SecurityCard(
+                workspaceId = workspace.id ?: "Unknown ID",
+                password = workspace.password ?: "No Password"
+            )
+        }
+    }
+}
+
+@Composable
+fun AddTaskDialog(onDismiss: () -> Unit) {
+    var taskName by remember { mutableStateOf("") }
+    var taskDescription by remember { mutableStateOf("") }
+    var fileName by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add New Task") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = taskName,
+                    onValueChange = { taskName = it },
+                    label = { Text("Task Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = taskDescription,
+                    onValueChange = { taskDescription = it },
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
+                )
+
+                // File Attachment Button
+                OutlinedButton(
+                    onClick = {
+                        // Mock file attachment
+                        fileName = "screenshot_001.png"
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.AttachFile, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = fileName ?: "Attach Picture/File")
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    // Handle task creation here (needs backend integration)
+                    onDismiss()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaroonPrimary)
+            ) {
+                Text("Add Task")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        }
+    )
+}
+
+@Composable
+fun TasksSection(onAddTask: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.List, contentDescription = "Tasks", tint = MaroonPrimary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Workspace Tasks", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+                IconButton(onClick = onAddTask) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Task", tint = MaroonPrimary)
+                }
+            }
+            HorizontalDivider()
+
+            // Placeholder for list of tasks
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No tasks yet. Click '+' to add one.",
+                    color = Color.Gray,
+                    fontSize = 14.sp
+                )
+            }
         }
     }
 }
@@ -208,11 +353,12 @@ fun WorkspaceStatusBadge(status: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun MemberStatusCard(memberCount: Int) {
+fun MemberStatusCard(memberCount: Int, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        onClick = onClick // Make card clickable
     ) {
         Row(
             modifier = Modifier
@@ -226,12 +372,16 @@ fun MemberStatusCard(memberCount: Int) {
                 Spacer(modifier = Modifier.width(12.dp))
                 Text("Active Members", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             }
-            Text(
-                text = "$memberCount",
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                color = MaroonPrimary
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "$memberCount",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = MaroonPrimary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(Icons.Default.ChevronRight, contentDescription = "View", tint = Color.Gray)
+            }
         }
     }
 }
@@ -255,7 +405,7 @@ fun EditableDetailsCard(
                 Text("Workspace Details", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             HorizontalDivider()
-            
+
             OutlinedTextField(
                 value = department,
                 onValueChange = onDepartmentChange,
