@@ -147,16 +147,16 @@ private fun WorkspaceAppContent(
                 composable(WorkspaceScreen.JoinWorkspace.route) {
                     JoinWorkspaceScreen(
                         onWorkspaceJoined = { code, password ->
-                            val isSuccessful = viewModel.joinWorkspace(code, password)
-                            if (isSuccessful) {
-                                navController.navigate(WorkspaceScreen.WorkspaceList.route) {
-                                    popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
-                                }
+                            viewModel.joinWorkspace(code, password)
+
+                            navController.navigate(WorkspaceScreen.WorkspaceList.route) {
+                                popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
                             }
                         },
                         onBackPressed = { navController.popBackStack() }
                     )
                 }
+
 
                 composable(WorkspaceScreen.WorkspaceList.route) {
                     WorkspaceListScreen(

@@ -109,13 +109,13 @@ fun WorkspaceNavHost(
         composable(WorkspaceScreen.JoinWorkspace.route) {
             JoinWorkspaceScreen(
                 onWorkspaceJoined = { code, password ->
-                    if (viewModel.joinWorkspace(code, password)) {
-                        navController.navigate(WorkspaceScreen.WorkspaceList.route) {
-                            popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
-                        }
+                    viewModel.joinWorkspace(code, password)
+
+                    navController.navigate(WorkspaceScreen.WorkspaceList.route) {
+                        popUpTo(WorkspaceScreen.Start.route) { inclusive = true }
                     }
                 },
-                onBackPressed = { navController.navigateUp() }
+                        onBackPressed = { navController.navigateUp() }
             )
         }
 
