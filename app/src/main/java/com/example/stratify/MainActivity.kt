@@ -1,11 +1,15 @@
 package com.example.stratify
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.core.app.ActivityCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
@@ -15,9 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.compose.*
+import androidx.work.*
 import com.example.stratify.ui.dashboard.DashboardScreen
 import com.example.stratify.ui.full_analysis.FullAnalysisScreen
 import com.example.stratify.ui.main.BottomNavigationBar
@@ -26,7 +30,9 @@ import com.example.stratify.ui.theme.StratifyTheme
 import com.example.stratify.view.profile.ProfileEditScreen
 import com.example.stratify.view.profile.SharedViewModel
 import com.example.stratify.view.user.ProfileOptionsScreen
+import com.example.scrum_section.worker.DailySummaryWorker
 import com.google.firebase.auth.FirebaseAuth
+import java.util.concurrent.TimeUnit
 
 // =====================
 // Routes
@@ -47,6 +53,43 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // =====================
+        // 🔔 REQUEST NOTIFICATION PERMISSION (Android 13+)
+        // =====================
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    1001
+                )
+            }
+        }
+
+        // =====================
+        // ⏰ SCHEDULE DAILY WORKER
+        // =====================
+        val dailyWork =
+            PeriodicWorkRequestBuilder<DailySummaryWorker>(1, TimeUnit.DAYS)
+                .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            DailySummaryWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            dailyWork
+        )
+
+        // =====================
+        // 🔥 TESTING (hapus kalau sudah yakin)
+        // =====================
+        WorkManager.getInstance(this)
+            .enqueue(OneTimeWorkRequestBuilder<DailySummaryWorker>().build())
+
         setContent {
             StratifyTheme {
                 AppRoot(viewModel = sharedViewModel)
@@ -71,22 +114,18 @@ fun AppRoot(viewModel: SharedViewModel) {
         Screen.Login.route
     )
 
-    // ❌ Scaffold TIDAK punya bottomBar
     Scaffold(
         containerColor = Color.Transparent,
-        contentWindowInsets = WindowInsets(0) // ⬅️ HILANGKAN SAFE AREA BAWAAN
+        contentWindowInsets = WindowInsets(0)
     ) { padding ->
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFE5E7EB)) // background screen
+                .background(Color(0xFFE5E7EB))
                 .padding(padding)
         ) {
 
-            // =====================
-            // NAV CONTENT
-            // =====================
             NavHost(
                 navController = navController,
                 startDestination = Screen.Dashboard.route
@@ -145,13 +184,9 @@ fun AppRoot(viewModel: SharedViewModel) {
                 }
             }
 
-            // =====================
-            // FLOATING BOTTOM NAV (OVERLAY)
-            // =====================
             if (showBottomBar) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize(),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.BottomCenter
                 ) {
                     BottomNavigationBar(navController)
