@@ -37,6 +37,40 @@ class ScrumRepository {
         }
     }
 
+    suspend fun getUserTasksOnce(): List<Task> {
+        val col = userTasksCollectionPath() ?: return emptyList()
+        return try {
+            val snapshot = col.get().await()
+            snapshot.documents.mapNotNull { doc ->
+                val name = doc.getString("name") ?: return@mapNotNull null
+                val description = doc.getString("description") ?: ""
+                val estimation = doc.getString("estimation") ?: ""
+                val deadline = doc.getString("deadline") ?: ""
+                val statusName = doc.getString("status") ?: TaskStatus.TODO.name
+                val status = try {
+                    TaskStatus.valueOf(statusName)
+                } catch (e: Exception) {
+                    TaskStatus.TODO
+                }
+
+                val id = doc.id.hashCode()
+                Task(
+                    id = id,
+                    name = name,
+                    description = description,
+                    estimation = estimation,
+                    deadline = deadline,
+                    status = status,
+                    remoteId = doc.id
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("SCRUM_REPO", "getUserTasksOnce error", e)
+            emptyList()
+        }
+    }
+
+
     suspend fun updateTaskRemote(task: Task): Result<Unit> {
         return try {
             val col = userTasksCollectionPath() ?: return Result.failure(Exception("User not authenticated"))

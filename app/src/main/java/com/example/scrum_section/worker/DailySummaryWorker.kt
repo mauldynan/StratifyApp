@@ -12,8 +12,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.scrum_section.data.TaskRepository
-import com.example.scrum_section.util.TaskStatus
+//import com.example.scrum_section.data.TaskRepository
+import com.example.stratify.ui.scrum.ScrumRepository
+//import com.example.scrum_section.util.TaskStatus
+import com.example.stratify.ui.scrum.TaskStatus
+
 import com.example.stratify.R
 
 class DailySummaryWorker(
@@ -29,37 +32,36 @@ class DailySummaryWorker(
 
     override suspend fun doWork(): Result {
         try {
-            Log.d(WORK_NAME, "Worker dimulai...")
+            Log.d(WORK_NAME, "Worker started...")
 
-            // 1. Ambil semua tugas dari repositori
-            val allTasks = TaskRepository.getTasks()
+            val repo = ScrumRepository()
+            val allTasks = repo.getUserTasksOnce()
 
-            // 2. Filter tugas yang belum selesai (TODO atau IN_PROGRESS)
+            Log.d(WORK_NAME, "Total tasks from Firestore: ${allTasks.size}")
+
             val pendingTasks = allTasks.filter {
                 it.status == TaskStatus.TODO ||
                         it.status == TaskStatus.IN_PROGRESS
             }
 
             if (pendingTasks.isEmpty()) {
-                Log.d(WORK_NAME, "Tidak ada tugas yang perlu diingatkan. Pekerjaan selesai.")
+                Log.d(WORK_NAME, "No pending tasks.")
                 return Result.success()
             }
 
-            // 3. Konten notifikasi
-            val notificationTitle = "Ringkasan Tugas Harian Anda"
-            val notificationContent = "Anda memiliki ${pendingTasks.size} tugas yang belum selesai. Ayo selesaikan!"
+            val title = "Your Daily Task Summary"
+            val content =
+                "You have ${pendingTasks.size} unfinished task(s). Let's get them done!"
 
-            // 4. Tampilkan notifikasi
-            showNotification(notificationTitle, notificationContent)
+            showNotification(title, content)
 
-            Log.d(WORK_NAME, "Notifikasi ringkasan harian berhasil ditampilkan.")
             return Result.success()
-
         } catch (e: Exception) {
-            Log.e(WORK_NAME, "Pekerjaan gagal", e)
+            Log.e(WORK_NAME, "Worker failed", e)
             return Result.failure()
         }
     }
+
 
     private fun showNotification(title: String, content: String) {
         createNotificationChannel()
@@ -77,7 +79,7 @@ class DailySummaryWorker(
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            Log.w(WORK_NAME, "Izin notifikasi tidak diberikan.")
+            Log.w(WORK_NAME, "Notification permission not granted.")
             return
         }
 
@@ -88,8 +90,8 @@ class DailySummaryWorker(
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Ringkasan Tugas Harian"
-            val descriptionText = "Notifikasi harian untuk tugas yang belum selesai"
+            val name = "Daily Task Summary"
+            val descriptionText = "Daily notifications for unfinished tasks"
             val importance = NotificationManager.IMPORTANCE_DEFAULT
             val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
                 description = descriptionText
