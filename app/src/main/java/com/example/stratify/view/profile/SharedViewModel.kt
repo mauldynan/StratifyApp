@@ -99,28 +99,18 @@ class SharedViewModel : ViewModel() {
         }
     }
 
-    fun joinWorkspace(code: String, password: String): Boolean {
-        if (workspaceExists(code)) {
-            val index = _workspaces.indexOfFirst { it.id == code }
-            if (index != -1) {
-                val existing = _workspaces[index]
-
-                // Only add member if transitioning to joined status
-                if (!existing.isJoined) {
-                    val updatedMembers = ArrayList(existing.members)
-                    updatedMembers.add(displayName.value ?: "Member")
-
-                    _workspaces[index] = existing.copy(
-                        isJoined = true,
-                        members = updatedMembers
-                    )
+    fun joinWorkspace(code: String, password: String) {
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                val success = repo.joinWorkspace(code, password)
+                if (success) {
+                    loadUserWorkspaces()
                 }
+            } finally {
+                isLoading = false
             }
-            return true
         }
-
-        // Cannot join a workspace that doesn't exist
-        return false
     }
 
     private fun workspaceExists(code: String): Boolean {

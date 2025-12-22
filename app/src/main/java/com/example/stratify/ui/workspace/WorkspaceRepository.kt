@@ -52,4 +52,30 @@ class WorkspaceRepository {
             )
             .await()
     }
+
+    suspend fun joinWorkspace(
+        code: String,
+        password: String
+    ): Boolean {
+        val uid = auth.currentUser?.uid ?: return false
+        val userName = auth.currentUser?.displayName ?: "Member"
+
+        val docRef = db.collection("workspaces").document(code)
+        val snapshot = docRef.get().await()
+
+        if (!snapshot.exists()) return false
+
+        val storedPassword = snapshot.getString("password")
+        if (storedPassword != password) return false
+
+        docRef.update(
+            mapOf(
+                "memberIds" to com.google.firebase.firestore.FieldValue.arrayUnion(uid),
+                "members" to com.google.firebase.firestore.FieldValue.arrayUnion(userName)
+            )
+        ).await()
+
+        return true
+    }
+
 }
