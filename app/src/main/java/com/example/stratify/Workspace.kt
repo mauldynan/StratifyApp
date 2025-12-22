@@ -2,8 +2,11 @@ package com.example.stratify
 
 import android.os.Parcelable
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.ServerTimestamp
 import kotlinx.parcelize.Parcelize
-import kotlinx.parcelize.RawValue
+import java.util.Date
+import com.example.stratify.ui.workspace.ProgressDetail
+
 
 @Parcelize
 data class Workspace(
@@ -15,30 +18,32 @@ data class Workspace(
     val password: String = "",
     var status: String = "To Do",
     var department: String = "",
-
-    val members: @RawValue ArrayList<String> = arrayListOf(),
-    val memberIds: @RawValue ArrayList<String> = arrayListOf(),
-    val memberPhotos: @RawValue HashMap<String, String> = hashMapOf(),
-
+    val members: ArrayList<String> = arrayListOf(),
+    val memberIds: ArrayList<String> = arrayListOf(),
+    val memberPhotos: HashMap<String, String> = hashMapOf(),
     var details: String = "",
-
-    val tasks: @RawValue ArrayList<WorkspaceTask> = arrayListOf(),
-
-    val createdAt: @RawValue Any? = null,
-
+    @ServerTimestamp
+    val createdAt: Date? = null,
     val updatedAt: Long = System.currentTimeMillis(),
-    var isJoined: Boolean = false
-) : Parcelable {
-    constructor() : this(id = "")
+    var isJoined: Boolean = false,
+    var progressDetails: ArrayList<ProgressDetail> = arrayListOf(),
+
+    ) : Parcelable {
+
+    constructor() : this(
+        id = "",
+        name = "",
+        creatorName = "",
+        creatorId = "",
+        password = "",
+        status = "To Do",
+        department = "",
+        members = arrayListOf(),
+        memberIds = arrayListOf(),
+        memberPhotos = hashMapOf(),
+        details = "",
+        createdAt = null,
+        updatedAt = System.currentTimeMillis(),
+        isJoined = false
+    )
 }
-
-@Parcelize
-data class WorkspaceTask(
-    val id: String = "",
-    val title: String = "",
-    val description: String = "",
-
-    val attachmentUri: String? = null,
-
-    val isCompleted: Boolean = false
-) : Parcelable

@@ -13,20 +13,39 @@ class WorkspaceRepository {
     suspend fun getUserWorkspaces(): List<Workspace> {
         val uid = auth.currentUser?.uid ?: return emptyList()
 
+        // 1. Ambil semua workspace yang user join
         val snapshot = db.collection("workspaces")
             .whereArrayContains("memberIds", uid)
             .get()
             .await()
 
-        return snapshot.documents.mapNotNull { doc ->
+        // 2. Mapping Firestore → Workspace
+        return snapshot.documents.map { doc ->
+
+            // ===== AMBIL PROGRESS DETAILS =====
+            val progress = doc.get("progressDetails") as? List<Map<String, Any>> ?: emptyList()
+
+            val progressList = progress.map {
+                ProgressDetail(
+                    id = it["id"] as String,
+                    text = it["text"] as String,
+                    createdAt = (it["createdAt"] as Number).toLong()
+                )
+            }
+
+            // ===== BALIKIN WORKSPACE =====
             Workspace(
                 id = doc.id,
                 name = doc.getString("name") ?: "",
                 password = doc.getString("password") ?: "",
-                status = doc.getString("status") ?: "To Do"
+                status = doc.getString("status") ?: "To Do",
+                members = doc.get("members") as? ArrayList<String> ?: arrayListOf(),
+                progressDetails = ArrayList(progressList),
+                isJoined = true
             )
         }
     }
+
 
     suspend fun createWorkspace(
         name: String,
@@ -77,5 +96,25 @@ class WorkspaceRepository {
 
         return true
     }
+
+    suspend fun updateWorkspaceProgress(
+        workspaceId: String,
+        progressList: List<ProgressDetail>
+    ) {
+        db.collection("workspaces")
+            .document(workspaceId)
+            .update(
+                "progressDetails",
+                progressList.map {
+                    mapOf(
+                        "id" to it.id,
+                        "text" to it.text,
+                        "createdAt" to it.createdAt
+                    )
+                }
+            )
+            .await()
+    }
+
 
 }

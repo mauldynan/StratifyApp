@@ -13,7 +13,7 @@ import com.example.stratify.ui.workspace.WorkspaceRepository
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-
+import com.example.stratify.ui.workspace.ProgressDetail
 
 
 data class EcommerceAppData(
@@ -135,4 +135,65 @@ class SharedViewModel : ViewModel() {
             }
         }
     }
+
+    fun addProgress(workspaceId: String, text: String) {
+        viewModelScope.launch {
+            val index = _workspaces.indexOfFirst { it.id == workspaceId }
+            if (index == -1) return@launch
+
+            val ws = _workspaces[index]
+
+            val updatedList = ws.progressDetails.toMutableList().apply {
+                add(ProgressDetail(text = text))
+            }
+
+            _workspaces[index] = ws.copy(
+                progressDetails = ArrayList(updatedList)
+            )
+
+            repo.updateWorkspaceProgress(workspaceId, updatedList)
+        }
+    }
+
+    fun updateProgress(workspaceId: String, progress: ProgressDetail) {
+        viewModelScope.launch {
+            val index = _workspaces.indexOfFirst { it.id == workspaceId }
+            if (index == -1) return@launch
+
+            val ws = _workspaces[index]
+
+            val updatedList = ws.progressDetails.toMutableList().apply {
+                val i = indexOfFirst { it.id == progress.id }
+                if (i != -1) set(i, progress)
+            }
+
+            _workspaces[index] = ws.copy(
+                progressDetails = ArrayList(updatedList)
+            )
+
+            repo.updateWorkspaceProgress(workspaceId, updatedList)
+        }
+    }
+
+    fun deleteProgress(workspaceId: String, progressId: String) {
+        viewModelScope.launch {
+            val index = _workspaces.indexOfFirst { it.id == workspaceId }
+            if (index == -1) return@launch
+
+            val ws = _workspaces[index]
+
+            val updatedList = ws.progressDetails.toMutableList().apply {
+                removeAll { it.id == progressId }
+            }
+
+            _workspaces[index] = ws.copy(
+                progressDetails = ArrayList(updatedList)
+            )
+
+            repo.updateWorkspaceProgress(workspaceId, updatedList)
+        }
+    }
+
+
+
 }
