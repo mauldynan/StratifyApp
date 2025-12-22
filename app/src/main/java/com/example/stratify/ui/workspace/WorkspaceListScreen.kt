@@ -1,13 +1,10 @@
 package com.example.stratify.ui.workspace
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,16 +15,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.stratify.Workspace
 import com.example.stratify.view.profile.SharedViewModel
-import kotlinx.coroutines.launch
+import com.google.firebase.auth.FirebaseAuth
 
-// --- Optimized Design Tokens ---
+
+// --- Design Tokens ---
 private val maroonPrimary = Color(0xFF760000)
 private val goldAccent = Color(0xFFF6C761)
 private val lightBg = Color(0xFFF8F9FB)
@@ -40,8 +37,16 @@ fun WorkspaceListScreen(
     onNavigateToCreateWorkspace: () -> Unit,
     onNavigateToJoinWorkspace: () -> Unit
 ) {
+    val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+    LaunchedEffect(uid) {
+        if (uid != null) {
+            viewModel.loadUserWorkspaces()
+        }
+    }
+
+
     WorkspaceListContent(
-        viewModel = viewModel,
         workspaces = viewModel.workspaces,
         onNavigateToWorkspaceDetail = onNavigateToWorkspaceDetail,
         onNavigateToCreateWorkspace = onNavigateToCreateWorkspace,
@@ -52,7 +57,6 @@ fun WorkspaceListScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkspaceListContent(
-    viewModel: SharedViewModel,
     workspaces: List<Workspace>,
     onNavigateToWorkspaceDetail: (workspaceId: String) -> Unit,
     onNavigateToCreateWorkspace: () -> Unit,
@@ -65,18 +69,16 @@ fun WorkspaceListContent(
         it.name.contains(searchQuery, ignoreCase = true)
     }
 
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
-
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState, modifier = Modifier.navigationBarsPadding().padding(bottom = 98.dp)) },
         floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(bottom = 98.dp)) {
-                // Dropdown diletakkan di atas FAB agar tidak terhalang
+            Column(
+                horizontalAlignment = Alignment.End,
+                modifier = Modifier.padding(bottom = 98.dp)
+            ) {
                 DropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
-                    modifier = Modifier.background(Color.White).width(200.dp)
+                    modifier = Modifier.background(Color.White)
                 ) {
                     DropdownMenuItem(
                         text = { Text("Create Workspace", fontWeight = FontWeight.Bold) },
@@ -104,81 +106,51 @@ fun WorkspaceListContent(
                 ) {
                     Icon(
                         imageVector = if (showMenu) Icons.Default.Close else Icons.Default.Add,
-                        contentDescription = "Menu"
+                        contentDescription = null
                     )
                 }
             }
         },
         containerColor = lightBg
-    ) { paddingValues ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(padding)
                 .padding(horizontal = 20.dp)
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
 
-            // --- Modern Search Bar ---
+            Spacer(Modifier.height(16.dp))
+
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                placeholder = { Text("Search your workspace...", color = Color.Gray, fontSize = 14.sp) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                        tint = maroonPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search your workspace...") },
+                leadingIcon = { Icon(Icons.Default.Search, null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, null, tint = Color.Gray, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Clear, null)
                         }
                     }
                 },
-                singleLine = true,
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = goldAccent,
-                    unfocusedBorderColor = Color.White,
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedTextColor = maroonPrimary
-                )
+                shape = RoundedCornerShape(16.dp)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
 
-            if (workspaces.isEmpty() && searchQuery.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.GridView, null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
-                        Spacer(Modifier.height(12.dp))
-                        Text("No Workspaces Yet", fontWeight = FontWeight.Bold, color = Color.Gray)
-                        Text("Tap + to start collaborating.", fontSize = 12.sp, color = Color.LightGray)
-                    }
+            if (filteredWorkspaces.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No Workspaces Yet", color = Color.Gray)
                 }
             } else {
-                Text(
-                    "Active Rooms (${filteredWorkspaces.size})",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Black,
-                    color = maroonPrimary.copy(alpha = 0.6f),
-                    letterSpacing = 1.sp
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 150.dp)
+                    contentPadding = PaddingValues(bottom = 140.dp)
                 ) {
                     items(filteredWorkspaces, key = { it.id }) { workspace ->
                         WorkspaceCard(
@@ -201,101 +173,54 @@ fun WorkspaceCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .padding(20.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Room Icon/Avatar
             Box(
                 modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(maroonPrimary),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = workspace.name.take(1).uppercase(),
                     color = goldAccent,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 20.sp
+                    fontWeight = FontWeight.Bold
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = workspace.name,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = maroonPrimary
-                    )
-
-                    // Status Badge
-                    Surface(
-                        color = statusGreen.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "ACTIVE",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Black,
-                            color = statusGreen
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Outlined.Group,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = Color.Gray
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = "5 Members Joined", // Mock data for UI
-                        fontSize = 12.sp,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = "• ID: ${workspace.id}",
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
-                }
+                Text(
+                    text = workspace.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "ID: ${workspace.id}",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
             }
 
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = Color.LightGray
-            )
+            Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray)
         }
     }
 }
 
+/* ===== PREVIEW (NO VIEWMODEL, NO ERROR) ===== */
+
 @Preview(showBackground = true)
 @Composable
-fun WorkspaceListScreenPreview() {
+fun WorkspaceListPreview() {
     WorkspaceListContent(
-        viewModel = SharedViewModel(),
         workspaces = listOf(
             Workspace(id = "992102", name = "Stratify Team"),
             Workspace(id = "441290", name = "Marketing Dept")
