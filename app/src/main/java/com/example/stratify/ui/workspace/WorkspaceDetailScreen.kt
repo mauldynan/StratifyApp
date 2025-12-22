@@ -3,9 +3,13 @@ package com.example.stratify.ui.workspace
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.background
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,18 +18,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.stratify.Workspace
+import com.example.stratify.WorkspaceTask
+import com.example.stratify.ui.theme.MaroonPrimary
 import com.example.stratify.view.profile.SharedViewModel
+import java.util.UUID
 
 // --- Design Tokens ---
 private val maroonPrimary = Color(0xFF760000)
@@ -39,11 +45,12 @@ fun WorkspaceDetailScreen(
     workspaceId: String?,
     onBackPressed: () -> Unit
 ) {
-    val workspace by viewModel.getWorkspaceById(workspaceId ?: "").observeAsState()
+    // Find the workspace in the list to get the latest state
+    val workspace = viewModel.workspaces.find { it.id == workspaceId }
 
     if (workspace != null) {
         WorkspaceDetailContent(
-            workspace = workspace!!,
+            workspace = workspace,
             onBackPressed = onBackPressed,
             onUpdateWorkspace = { updated -> viewModel.updateWorkspace(updated) },
             onDeleteWorkspace = {
@@ -52,8 +59,11 @@ fun WorkspaceDetailScreen(
             }
         )
     } else {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = maroonPrimary)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = MaroonPrimary)
         }
     }
 }
@@ -66,74 +76,60 @@ fun WorkspaceDetailContent(
     onUpdateWorkspace: (Workspace) -> Unit,
     onDeleteWorkspace: () -> Unit
 ) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var showEditNameDialog by remember { mutableStateOf(false) }
-    var tempName by remember { mutableStateOf(workspace.name) }
+    var showMembersDialog by remember { mutableStateOf(false) }
+    var showAddTaskDialog by remember { mutableStateOf(false) }
 
-    // Dialog Konfirmasi Hapus
-    if (showDeleteDialog) {
+    // --- Dialog: Members List ---
+    if (showMembersDialog) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Hapus Workspace?", fontWeight = FontWeight.Bold) },
-            text = { Text("Tindakan ini tidak dapat dibatalkan. Semua data di dalam workspace ini akan hilang.") },
+            onDismissRequest = { showMembersDialog = false },
+            title = { Text("Active Members") },
+            text = {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 300.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(workspace.members ?: emptyList()) { member ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(member, fontSize = 16.sp)
+                        }
+                        HorizontalDivider()
+                    }
+                }
+            },
             confirmButton = {
-                TextButton(onClick = onDeleteWorkspace) {
-                    Text("HAPUS", color = negativeRed, fontWeight = FontWeight.Black)
+                TextButton(onClick = { showMembersDialog = false }) {
+                    Text("Close", color = MaroonPrimary)
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("BATAL", color = Color.Gray)
-                }
-            },
-            containerColor = Color.White,
-            shape = RoundedCornerShape(28.dp)
+            }
         )
     }
 
-    // Dialog Edit Nama
-    if (showEditNameDialog) {
-        AlertDialog(
-            onDismissRequest = { showEditNameDialog = false },
-            title = { Text("Edit Nama Workspace", fontWeight = FontWeight.Bold) },
-            text = {
-                OutlinedTextField(
-                    value = tempName,
-                    onValueChange = { tempName = it },
-                    label = { Text("Nama Baru") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    onUpdateWorkspace(workspace.copy(name = tempName))
-                    showEditNameDialog = false
-                }) {
-                    Text("SIMPAN", color = maroonPrimary, fontWeight = FontWeight.Black)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditNameDialog = false }) {
-                    Text("BATAL", color = Color.Gray)
-                }
-            },
-            containerColor = Color.White,
-            shape = RoundedCornerShape(28.dp)
+    // --- Dialog: Add Task ---
+    if (showAddTaskDialog) {
+        AddTaskDialog(
+            onDismiss = { showAddTaskDialog = false },
+            onTaskCreated = { newTask ->
+                // CRITICAL FIX: Create a completely NEW ArrayList.
+                // If we reuse the old list reference, Compose won't detect the change.
+                val currentTasks = workspace.tasks ?: arrayListOf()
+                val newTaskList = ArrayList<WorkspaceTask>()
+                newTaskList.addAll(currentTasks)
+                newTaskList.add(newTask)
+
+                // Update the workspace with the new list
+                onUpdateWorkspace(workspace.copy(tasks = newTaskList))
+                showAddTaskDialog = false
+            }
         )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(workspace.name, fontWeight = FontWeight.Black, color = Color.White, fontSize = 18.sp)
-                        IconButton(onClick = { showEditNameDialog = true }) {
-                            Icon(Icons.Default.Edit, "Edit Name", tint = goldAccent, modifier = Modifier.size(18.dp))
-                        }
-                    }
-                },
+                title = { Text(workspace.name ?: "Untitled Workspace", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
@@ -157,17 +153,70 @@ fun WorkspaceDetailContent(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 1. Status Section (Dropdown Selection)
-            StatusSelectionSection(
+            // 1. Status Section
+            EditableStatusSection(
                 currentStatus = workspace.status,
                 onStatusChange = { newStatus -> onUpdateWorkspace(workspace.copy(status = newStatus)) }
             )
 
-            // 2. Access Credentials (ID & Password)
-            AccessCredentialsCard(id = workspace.id, password = workspace.password)
+            // 2. Membership Status (For current user)
+            if (workspace.isJoined) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(2.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = "Membership", tint = MaroonPrimary)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Membership", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
+                        HorizontalDivider()
+                        OutlinedTextField(
+                            value = "Joined",
+                            onValueChange = {},
+                            label = { Text("Status") },
+                            modifier = Modifier.fillMaxWidth(),
+                            readOnly = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaroonPrimary,
+                                focusedLabelColor = MaroonPrimary
+                            )
+                        )
+                    }
+                }
+            }
 
-            // 3. Workspace Detail Form (Department & Task)
-            DetailFormCard(
+            // 3. Member Status (Active Members Count)
+            MemberStatusCard(
+                memberCount = workspace.members.size,
+                onClick = { showMembersDialog = true }
+            )
+
+            // 4. Tasks Section
+            TasksSection(
+                tasks = workspace.tasks ?: emptyList(),
+                onAddTask = { showAddTaskDialog = true },
+                onTaskChecked = { task, isChecked ->
+                    // CRITICAL FIX: Rebuild list when checking items too
+                    val currentList = workspace.tasks ?: arrayListOf()
+                    val updatedList = ArrayList<WorkspaceTask>()
+
+                    // Copy all items, modifying the one that was clicked
+                    currentList.forEach { t ->
+                        if (t.id == task.id) {
+                            updatedList.add(t.copy(isCompleted = isChecked))
+                        } else {
+                            updatedList.add(t)
+                        }
+                    }
+                    onUpdateWorkspace(workspace.copy(tasks = updatedList))
+                }
+            )
+
+            // 5. Workspace Details
+            EditableDetailsCard(
                 department = workspace.department,
                 details = workspace.details,
                 onUpdate = { dept, detail ->
@@ -175,10 +224,181 @@ fun WorkspaceDetailContent(
                 }
             )
 
-            // 4. Members Section
-            MembersListCard(members = workspace.members)
+            // 6. Security Card
+            SecurityCard(
+                workspaceId = workspace.id,
+                password = workspace.password
+            )
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(40.dp))
+// --- SUB-COMPONENTS ---
+
+@Composable
+fun AddTaskDialog(
+    onDismiss: () -> Unit,
+    onTaskCreated: (WorkspaceTask) -> Unit
+) {
+    var taskName by remember { mutableStateOf("") }
+    var taskDescription by remember { mutableStateOf("") }
+    var selectedUri by remember { mutableStateOf<Uri?>(null) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        selectedUri = uri
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add New Task") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = taskName,
+                    onValueChange = { taskName = it },
+                    label = { Text("Task Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = taskDescription,
+                    onValueChange = { taskDescription = it },
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
+                )
+                OutlinedButton(
+                    onClick = { launcher.launch("image/*") },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.AttachFile, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (selectedUri != null) "File Selected" else "Attach Picture (Optional)",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (selectedUri != null) {
+                    Text(
+                        text = "Attached: ${selectedUri!!.lastPathSegment}",
+                        fontSize = 12.sp,
+                        color = MaroonPrimary
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (taskName.isNotBlank()) {
+                        val newTask = WorkspaceTask(
+                            id = UUID.randomUUID().toString(),
+                            title = taskName,
+                            description = taskDescription,
+                            attachmentUri = selectedUri?.toString()
+                        )
+                        onTaskCreated(newTask)
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = MaroonPrimary)
+            ) {
+                Text("Add Task")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = Color.Gray) }
+        }
+    )
+}
+
+@Composable
+fun TasksSection(
+    tasks: List<WorkspaceTask>,
+    onAddTask: () -> Unit,
+    onTaskChecked: (WorkspaceTask, Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.List, contentDescription = "Tasks", tint = MaroonPrimary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Workspace Tasks", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+                IconButton(onClick = onAddTask) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Task", tint = MaroonPrimary)
+                }
+            }
+            HorizontalDivider()
+
+            if (tasks.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No tasks yet. Click '+' to add one.", color = Color.Gray, fontSize = 14.sp)
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    tasks.forEach { task ->
+                        TaskItem(task = task, onCheckedChange = { isChecked ->
+                            onTaskChecked(task, isChecked)
+                        })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TaskItem(task: WorkspaceTask, onCheckedChange: (Boolean) -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = task.isCompleted,
+                onCheckedChange = onCheckedChange,
+                colors = CheckboxDefaults.colors(checkedColor = MaroonPrimary)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = task.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = if (task.isCompleted) Color.Gray else Color.Black
+                )
+                if (task.description.isNotBlank()) {
+                    Text(
+                        text = task.description,
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (task.attachmentUri != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                        Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaroonPrimary)
+                        Text("Attachment", fontSize = 10.sp, color = MaroonPrimary)
+                    }
+                }
+            }
         }
     }
 }
@@ -191,12 +411,8 @@ fun StatusSelectionSection(currentStatus: String, onStatusChange: (String) -> Un
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("STATUS WORKSPACE", fontSize = 11.sp, fontWeight = FontWeight.Black, color = maroonPrimary, letterSpacing = 1.sp)
         Box {
-            StatusBadge(status = currentStatus, onClick = { expanded = true })
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(Color.White).width(180.dp)
-            ) {
+            WorkspaceStatusBadge(status = currentStatus, onClick = { expanded = true })
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 statuses.forEach { status ->
                     DropdownMenuItem(
                         text = { Text(status, fontWeight = FontWeight.Bold) },
@@ -212,13 +428,13 @@ fun StatusSelectionSection(currentStatus: String, onStatusChange: (String) -> Un
 }
 
 @Composable
-fun StatusBadge(status: String, onClick: () -> Unit) {
-    val color = when (status) {
-        "To Do" -> Color.Gray
-        "In Progress" -> Color(0xFF1976D2)
-        "To Verify" -> Color(0xFFF57C00)
-        "Done" -> Color(0xFF388E3C)
-        else -> maroonPrimary
+fun WorkspaceStatusBadge(status: String, onClick: () -> Unit) {
+    val (color, displayName) = when (status) {
+        "To Do" -> Color.Gray to "To Do"
+        "In Progress" -> Color.Blue to "In Progress"
+        "To Verify" -> Color(0xFFFFA500) to "To Verify"
+        "Done" -> Color(0xFF4CAF50) to "Done"
+        else -> Color.Gray to status
     }
 
     Surface(
@@ -241,54 +457,7 @@ fun StatusBadge(status: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun AccessCredentialsCard(id: String, password: String) {
-    val context = LocalContext.current
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Lock, null, tint = maroonPrimary, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("AKSES KREDENSIAL", fontSize = 11.sp, fontWeight = FontWeight.Black, color = maroonPrimary)
-            }
-
-            CredentialRow(label = "Room ID", value = id, context = context)
-            CredentialRow(label = "Password", value = password, context = context)
-        }
-    }
-}
-
-@Composable
-fun CredentialRow(label: String, value: String, context: Context) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(lightBg)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column {
-            Text(label, fontSize = 10.sp, color = Color.Gray)
-            Text(value, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = maroonPrimary)
-        }
-        IconButton(onClick = {
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText(label, value))
-            Toast.makeText(context, "$label disalin!", Toast.LENGTH_SHORT).show()
-        }) {
-            Icon(Icons.Default.ContentCopy, null, tint = maroonPrimary, modifier = Modifier.size(18.dp))
-        }
-    }
-}
-
-@Composable
-fun DetailFormCard(
+fun EditableDetailsCard(
     department: String,
     details: String,
     onUpdate: (String, String) -> Unit
@@ -308,6 +477,7 @@ fun DetailFormCard(
                 Spacer(Modifier.width(8.dp))
                 Text("DETAIL TUGAS", fontSize = 11.sp, fontWeight = FontWeight.Black, color = maroonPrimary)
             }
+            HorizontalDivider()
 
             OutlinedTextField(
                 value = deptState,
@@ -337,6 +507,36 @@ fun DetailFormCard(
     }
 }
 
+// --- MISSING COMPONENTS ADDED HERE ---
+
+@Composable
+fun MemberStatusCard(memberCount: Int, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Group, contentDescription = "Members", tint = MaroonPrimary)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text("Members", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("$memberCount Active Members", fontSize = 12.sp, color = Color.Gray)
+                }
+            }
+            Icon(Icons.Default.ArrowForwardIos, contentDescription = "View", tint = Color.Gray, modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
 @Composable
 fun MembersListCard(members: List<String>) {
     Card(
@@ -345,56 +545,62 @@ fun MembersListCard(members: List<String>) {
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Lock, contentDescription = "Security", tint = MaroonPrimary)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text("Security", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+            HorizontalDivider()
+
+            // Workspace ID
+            OutlinedTextField(
+                value = workspaceId,
+                onValueChange = {},
+                label = { Text("Workspace ID") },
+                readOnly = true,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Group, null, tint = maroonPrimary, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("ANGGOTA JOINED", fontSize = 11.sp, fontWeight = FontWeight.Black, color = maroonPrimary)
-                }
-                Surface(color = goldAccent, shape = CircleShape) {
-                    Text("${members.size}", modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp), fontSize = 10.sp, fontWeight = FontWeight.Black)
-                }
-            }
+                trailingIcon = { CopyButton(workspaceId) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaroonPrimary,
+                    focusedLabelColor = MaroonPrimary
+                )
+            )
 
-            Spacer(Modifier.height(16.dp))
-
-            members.forEach { member ->
-                Row(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(Modifier.size(32.dp).clip(CircleShape).background(maroonPrimary.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
-                        Text(member.take(1).uppercase(), color = maroonPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Text(member, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.DarkGray)
-                }
-            }
+            // Password
+            OutlinedTextField(
+                value = password,
+                onValueChange = {},
+                label = { Text("Workspace Password") },
+                readOnly = true,
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = { CopyButton(password) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaroonPrimary,
+                    focusedLabelColor = MaroonPrimary
+                )
+            )
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun WorkspaceDetailScreenPreview() {
-    WorkspaceDetailContent(
-        workspace = Workspace(
-            id = "992102",
-            name = "Stratify Design Team",
-            status = "In Progress",
-            department = "UI/UX Dept",
-            details = "Merancang antarmuka aplikasi Android untuk proyek Stratify v2.0.",
-            password = "ADMIN-2025",
-            members = arrayListOf("Andi Wijaya", "Siti Aminah", "Rizky Fauzi"),
-            isJoined = true
-        ),
-        onBackPressed = {},
-        onUpdateWorkspace = {},
-        onDeleteWorkspace = {}
+fun CopyButton(textToCopy: String) {
+    val context = LocalContext.current
+    IconButton(onClick = {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Copied Text", textToCopy)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+    }) {
+        Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = MaroonPrimary)
+    }
+}
+
+@Composable
+fun HorizontalDivider() {
+    Divider(
+        color = Color.LightGray.copy(alpha = 0.5f),
+        thickness = 1.dp
     )
 }
