@@ -1,7 +1,7 @@
 package com.example.stratify
 
 import android.Manifest
-import android.content.Intent
+import android.content.Intent // <--- THIS WAS MISSING
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -9,27 +9,22 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.core.app.ActivityCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.DialogProperties
-// IMPORT PENTING UNTUK NAVIGASI ARGUMENT
+import androidx.core.app.ActivityCompat
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import androidx.work.*
 
 import com.example.stratify.ui.dashboard.DashboardScreen
-// Pastikan tidak ada import FullAnalysisScreen yang lama jika sudah dihapus
-// import com.example.stratify.ui.full_analysis.FullAnalysisScreen <--- HAPUS JIKA MERAH
-
 import com.example.stratify.ui.main.BottomNavigationBar
 import com.example.stratify.ui.scrum.ScrumScreen
 import com.example.stratify.ui.theme.StratifyTheme
@@ -40,9 +35,6 @@ import com.example.scrum_section.worker.DailySummaryWorker
 import com.google.firebase.auth.FirebaseAuth
 import java.util.concurrent.TimeUnit
 
-// =====================
-// Routes
-// =====================
 sealed class Screen(val route: String) {
     object Dashboard : Screen("dashboard")
     object FullAnalysis : Screen("full_analysis")
@@ -60,9 +52,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // =====================
-        // 🔔 REQUEST NOTIFICATION PERMISSION (Android 13+)
-        // =====================
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(
                     this,
@@ -77,9 +66,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // =====================
-        // ⏰ SCHEDULE DAILY WORKER
-        // =====================
         val dailyWork =
             PeriodicWorkRequestBuilder<DailySummaryWorker>(1, TimeUnit.DAYS)
                 .build()
@@ -108,13 +94,21 @@ fun AppRoot(viewModel: SharedViewModel) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val showBottomBar = currentRoute !in listOf(
+    var isWorkspaceBottomBarVisible by remember { mutableStateOf(true) }
+
+    val isGlobalHiddenRoute = currentRoute in listOf(
         Screen.ProfileOptions.route,
         Screen.EditProfile.route,
-        Screen.Login.route,
-        // Sembunyikan bottom bar saat di halaman analisis agar fokus
-        "${Screen.FullAnalysis.route}/{appName}"
-    )
+        Screen.Login.route
+    ) || currentRoute?.startsWith(Screen.FullAnalysis.route) == true
+
+    val showBottomBar = if (isGlobalHiddenRoute) {
+        false
+    } else if (currentRoute == Screen.MainWorkspace.route) {
+        isWorkspaceBottomBarVisible
+    } else {
+        true
+    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -137,30 +131,29 @@ fun AppRoot(viewModel: SharedViewModel) {
                     DashboardScreen(navController, viewModel)
                 }
 
-                // ==========================================
-                // 👇 BAGIAN INTEGRASI FULL ANALYSIS 👇
-                // ==========================================
                 composable(
-                    route = "${Screen.FullAnalysis.route}/{appName}", // Menerima parameter nama aplikasi
+                    route = "${Screen.FullAnalysis.route}/{appName}",
                     arguments = listOf(navArgument("appName") { type = NavType.StringType })
                 ) { backStackEntry ->
-                    // 1. Tangkap nama aplikasi yang dikirim (misal: "shopee")
                     val appName = backStackEntry.arguments?.getString("appName") ?: "shopee"
-
-                    // 2. Panggil FullAnalysisFragment
                     FullAnalysisFragment(
                         targetApp = appName,
                         onBackPressed = { navController.popBackStack() }
                     )
                 }
-                // ==========================================
 
                 composable(Screen.Scrum.route) {
                     ScrumScreen()
                 }
 
                 composable(Screen.MainWorkspace.route) {
-                    MainWorkspaceScreen(viewModel)
+                    MainWorkspaceScreen(
+                        viewModel = viewModel,
+                        // 4. CALLBACK: Update state when internal navigation changes
+                        onBottomBarVisibilityChange = { isVisible ->
+                            isWorkspaceBottomBarVisible = isVisible
+                        }
+                    )
                 }
 
                 dialog(

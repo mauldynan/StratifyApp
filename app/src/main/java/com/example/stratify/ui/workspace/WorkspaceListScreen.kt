@@ -21,14 +21,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.stratify.Workspace
 import com.example.stratify.view.profile.SharedViewModel
-import com.google.firebase.auth.FirebaseAuth
-
 
 // --- Design Tokens ---
 private val maroonPrimary = Color(0xFF760000)
 private val goldAccent = Color(0xFFF6C761)
 private val lightBg = Color(0xFFF8F9FB)
-private val statusGreen = Color(0xFF10B981)
 
 @Composable
 fun WorkspaceListScreen(
@@ -37,15 +34,6 @@ fun WorkspaceListScreen(
     onNavigateToCreateWorkspace: () -> Unit,
     onNavigateToJoinWorkspace: () -> Unit
 ) {
-    val uid = FirebaseAuth.getInstance().currentUser?.uid
-
-    LaunchedEffect(uid) {
-        if (uid != null) {
-            viewModel.loadUserWorkspaces()
-        }
-    }
-
-
     WorkspaceListContent(
         workspaces = viewModel.workspaces,
         onNavigateToWorkspaceDetail = onNavigateToWorkspaceDetail,
@@ -71,9 +59,9 @@ fun WorkspaceListContent(
 
     Scaffold(
         floatingActionButton = {
-            Column(
-                horizontalAlignment = Alignment.End,
-                modifier = Modifier.padding(bottom = 98.dp)
+            Box(
+                contentAlignment = Alignment.BottomEnd,
+                modifier = Modifier.padding(bottom = 80.dp)
             ) {
                 DropdownMenu(
                     expanded = showMenu,
@@ -90,7 +78,7 @@ fun WorkspaceListContent(
                     )
                     DropdownMenuItem(
                         text = { Text("Join Workspace", fontWeight = FontWeight.Bold) },
-                        leadingIcon = { Icon(Icons.Default.GroupAdd, null, tint = goldAccent) },
+                        leadingIcon = { Icon(Icons.Outlined.Group, null, tint = goldAccent) },
                         onClick = {
                             showMenu = false
                             onNavigateToJoinWorkspace()
@@ -106,7 +94,7 @@ fun WorkspaceListContent(
                 ) {
                     Icon(
                         imageVector = if (showMenu) Icons.Default.Close else Icons.Default.Add,
-                        contentDescription = null
+                        contentDescription = "Menu"
                     )
                 }
             }
@@ -122,6 +110,7 @@ fun WorkspaceListContent(
 
             Spacer(Modifier.height(16.dp))
 
+            // Search Bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -135,17 +124,23 @@ fun WorkspaceListContent(
                         }
                     }
                 },
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = maroonPrimary,
+                    focusedLabelColor = maroonPrimary,
+                    cursorColor = maroonPrimary
+                )
             )
 
             Spacer(Modifier.height(24.dp))
 
+            // Content Logic
             if (filteredWorkspaces.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No Workspaces Yet", color = Color.Gray)
+                    Text("No Matching Workspaces", color = Color.Gray)
                 }
             } else {
                 LazyColumn(
@@ -174,7 +169,8 @@ fun WorkspaceCard(
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
@@ -190,7 +186,8 @@ fun WorkspaceCard(
                 Text(
                     text = workspace.name.take(1).uppercase(),
                     color = goldAccent,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
                 )
             }
 
@@ -203,11 +200,21 @@ fun WorkspaceCard(
                     fontSize = 16.sp
                 )
                 Spacer(Modifier.height(4.dp))
+
                 Text(
                     text = "ID: ${workspace.id}",
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
+
+                if (!workspace.status.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = workspace.status,
+                        fontSize = 10.sp,
+                        color = if (workspace.status == "Done") Color(0xFF10B981) else Color(0xFFF59E0B)
+                    )
+                }
             }
 
             Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray)
@@ -215,15 +222,13 @@ fun WorkspaceCard(
     }
 }
 
-/* ===== PREVIEW (NO VIEWMODEL, NO ERROR) ===== */
-
 @Preview(showBackground = true)
 @Composable
 fun WorkspaceListPreview() {
     WorkspaceListContent(
         workspaces = listOf(
-            Workspace(id = "992102", name = "Stratify Team"),
-            Workspace(id = "441290", name = "Marketing Dept")
+            Workspace(id = "992102", name = "Stratify Team", status = "In Progress"),
+            Workspace(id = "441290", name = "Marketing Dept", status = "Done")
         ),
         onNavigateToWorkspaceDetail = {},
         onNavigateToCreateWorkspace = {},
